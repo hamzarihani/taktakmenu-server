@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDate,
   IsEmail,
   IsIn,
@@ -8,10 +9,11 @@ import {
   Length,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { Tenant } from 'src/tenant/entities/tenant.entity';
+import type { DeepPartial } from 'typeorm';
 
-export class CreateUserDto {
+export class CreateTenantSuperAdminDto {
   @IsEmail()
   email: string;
 
@@ -30,9 +32,16 @@ export class CreateUserDto {
   @IsOptional()
   tenant?: Tenant;
 
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  createdBy?: DeepPartial<User>;
+
   @IsNotEmpty()
   @Length(6, 6)
-  otpCode: string;
+  otpCode: string | null;
 
   @IsDate()
   otpExpiresAt?: Date;

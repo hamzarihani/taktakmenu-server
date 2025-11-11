@@ -13,6 +13,8 @@ import { AuthModule } from './auth/auth.module';
 import { JwtMiddleware } from './common/middleware/jwt.middleware';
 import { JwtModule } from '@nestjs/jwt';
 import { TenantsModule } from './tenant/tenants.module';
+import { PlansModule } from './plan/plans.module';
+import { SubdomainMiddleware } from './common/middleware/subdomain.middleware';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { TenantsModule } from './tenant/tenants.module';
     DatabaseModule,
     UsersModule,
     TenantsModule,
+    PlansModule,
     AuthModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default_secret',
@@ -33,7 +36,7 @@ import { TenantsModule } from './tenant/tenants.module';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(JwtMiddleware)
+      .apply(SubdomainMiddleware, JwtMiddleware)
       .exclude(
         { path: '', method: RequestMethod.GET },
         { path: 'auth/login', method: RequestMethod.ALL },

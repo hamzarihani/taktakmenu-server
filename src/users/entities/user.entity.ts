@@ -43,8 +43,11 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   otpExpiresAt: Date | null;
 
-  @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: true })
+  @ManyToOne(() => Tenant, (tenant) => tenant.users, { nullable: true, onDelete: "CASCADE" })
   tenant: Tenant | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  createdBy: User;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -72,7 +72,7 @@ export class AuthService {
   }
 
   private generateTokens(user: any) {
-    const payload = { sub: user.id, role: user.role };
+    const payload = { sub: user.id, role: user.role, tenantId: user?.tenant?.id };
 
     const access_token = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
