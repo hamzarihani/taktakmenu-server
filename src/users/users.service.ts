@@ -1,6 +1,8 @@
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -20,7 +22,7 @@ import { CreateTenantSuperAdminDto } from './dtos/create-super-admin.dto';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private usersRepository: Repository<User>
   ) {}
 
   async createUser(dto: CreateUserDto): Promise<User> {

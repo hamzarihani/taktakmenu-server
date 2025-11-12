@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Expose } from 'class-transformer';
 import { Tenant } from 'src/tenant/entities/tenant.entity';
+import { Subscription } from 'src/subscriptions/entities/subscription.entity';
 
 @Entity()
 export class Plan {
@@ -29,8 +30,8 @@ export class Plan {
   features: string[];
 
   @Expose()
-  @OneToMany(() => Tenant, (tenant) => tenant.plan)
-  tenants: Tenant[];
+  @OneToMany(() => Subscription, (subscription) => subscription.plan)
+  tenants: Subscription[];
 
   @Expose()
   @CreateDateColumn()

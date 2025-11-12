@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -14,14 +16,20 @@ import { JwtUser, PaginationResult } from 'src/common/interfaces';
 import { CreateTenantDto } from './dtos/create-tenant.dto';
 import { UsersService } from 'src/users/users.service';
 import { UserRole } from 'src/users/entities/user.entity';
-import { FetchTenantDto } from './dtos/fetch-tenant.dto';
+import { PlansService } from 'src/plan/plans.service';
+import { SubscriptionsService } from 'src/subscriptions/subscriptions.service';
 
 @Injectable()
 export class TenantsService {
   constructor(
     @InjectRepository(Tenant)
     private tenantsRepository: Repository<Tenant>,
-    private usersService: UsersService
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
+    @Inject(forwardRef(() => PlansService))
+    private plansService: PlansService,
+    @Inject(forwardRef(() => SubscriptionsService))
+    private subscriptionsService: SubscriptionsService,
   ) {}
 
   async findTenants(
@@ -29,7 +37,6 @@ export class TenantsService {
   ): Promise<PaginationResult<Tenant>> {
     const { page, limit, sortBy, sortOrder, search } = paginationDto;
     const offset = (page - 1) * limit;
-    console.log("findTenants",page, limit, sortBy, sortOrder, search)
 
     try {
       const columns = this.tenantsRepository.metadata.columns.map(
@@ -108,21 +115,11 @@ export class TenantsService {
   async createTenant(dto: CreateTenantDto, user: JwtUser): Promise<Tenant> {
     try {
       // 🔍 1️⃣ Check if tenant already exists with same subdomain
-      const existingTenant = await this.tenantsRepository.findOne({
-        where: { subdomain: dto.subdomain },
-      });
+      const existingTenant = await this.tenantsRepository.findOne({ where: { subdomain: dto.subdomain } });
+      if (existingTenant) throw new ConflictException('Subdomain already in use');
 
-      if (existingTenant) {
-        throw new ConflictException('Subdomain already in use');
-      }
-
-      const existingEmail = await this.tenantsRepository.findOne({
-        where: { email: dto.email },
-      });
-
-      if (existingEmail) {
-        throw new BadRequestException('Tenant with this email already exists.');
-      }
+      const existingEmail = await this.tenantsRepository.findOne({ where: { email: dto.email } });
+      if (existingEmail) throw new BadRequestException('Tenant with this email already exists.');
 
       const tenant = this.tenantsRepository.create({
         name: dto.fullName,
@@ -142,6 +139,11 @@ export class TenantsService {
         tenant: savedTenant,
         createdBy: { id: user.sub },
       });
+
+      const plan = await this.plansService.findById(dto.planId);
+      if (plan) {
+        await this.subscriptionsService.createSubscription(savedTenant, plan);
+      }
 
       return savedTenant;
     } catch (error: any) {

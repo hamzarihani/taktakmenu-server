@@ -48,6 +48,14 @@ export class PlansController {
     return this.plansService.createPlan(dto);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get plan by ID' })
+  @ApiParam({ name: 'id', required: true, description: 'UUID of the plan' })
+  @ApiResponse({ status: 200, description: 'Plan fetched successfully', type: Plan })
+  async getPlanById(@Param('id') id: string): Promise<Plan> {
+    return this.plansService.findById(id);
+  }
+
   // 🔹 PUT: Update existing plan
   @Put(':id')
   @ApiOperation({ summary: 'Update a plan by ID' })

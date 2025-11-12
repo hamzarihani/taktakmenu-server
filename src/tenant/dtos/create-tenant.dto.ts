@@ -1,7 +1,9 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
   IsString,
+  IsUUID,
   Matches,
   MinLength,
 } from 'class-validator';
@@ -22,5 +24,9 @@ export class CreateTenantDto {
   @Matches(/^[a-z0-9-]+$/, {
     message: 'Subdomain can only contain lowercase letters, numbers, and hyphens',
   })
-  subdomain: string; 
+  subdomain: string;
+
+  @ApiProperty({ example: 'uuid-of-plan', description: 'ID of the plan to assign to this tenant' })
+  @IsUUID()
+  planId: string;
 }

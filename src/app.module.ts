@@ -15,6 +15,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { TenantsModule } from './tenant/tenants.module';
 import { PlansModule } from './plan/plans.module';
 import { SubdomainMiddleware } from './common/middleware/subdomain.middleware';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SubdomainMiddleware } from './common/middleware/subdomain.middleware';
     UsersModule,
     TenantsModule,
     PlansModule,
+    SubscriptionsModule,
     AuthModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default_secret',
