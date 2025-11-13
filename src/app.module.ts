@@ -54,18 +54,9 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 
     // Authentication & Authorization
     AuthModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const expiresIn = configService.get<string>('JWT_EXPIRES_IN') || '15m';
-        return {
-          secret: configService.get<string>('JWT_SECRET') || configService.get<string>('JWT_ACCESS_SECRET') || 'default_secret',
-          signOptions: {
-            expiresIn: expiresIn as string,
-          },
-        };
-      },
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default_secret',
+      signOptions: { expiresIn: '15m' },
     }),
 
     // Core business modules
