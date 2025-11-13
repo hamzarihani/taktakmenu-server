@@ -6,17 +6,22 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  Req,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 import { FetchUsersDto } from './dtos/fetch-users.dto';
 import { plainToInstance } from 'class-transformer';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { PaginationResult } from 'src/common/interfaces';
 import { CreateTenantSuperAdminDto } from './dtos/create-super-admin.dto';
+import { JwtUser } from 'src/common/interfaces';
 
 @Injectable()
 export class UsersService {
@@ -160,5 +165,171 @@ export class UsersService {
       otpCode: otp,
       otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto, currentUser: JwtUser, tenantId: string): Promise<FetchUsersDto> {
+    const user = await this.usersRepository.findOne({
+      where: { id, tenant: { id: tenantId } },
+      relations: ['tenant'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Only SUPER_ADMIN or ADMIN can update users
+    if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only super admins and admins can update users');
+    }
+
+    // SUPER_ADMIN can update anyone, ADMIN can only update non-SUPER_ADMIN users
+    if (currentUser.role === UserRole.ADMIN && user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Admins cannot update super admin users');
+    }
+
+    // Check email uniqueness if email is being updated
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.findByEmail(dto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email already in use');
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.fullName !== undefined) user.fullName = dto.fullName;
+    if (dto.role !== undefined) {
+      // Only SUPER_ADMIN can change roles
+      if (currentUser.role !== UserRole.SUPER_ADMIN) {
+        throw new ForbiddenException('Only super admins can change user roles');
+      }
+      user.role = dto.role;
+    }
+    if (dto.isActive !== undefined) user.isActive = dto.isActive;
+
+    const updatedUser = await this.usersRepository.save(user);
+    return plainToInstance(FetchUsersDto, updatedUser, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async updateUserProfile(id: string, dto: UpdateUserProfileDto, currentUser: JwtUser): Promise<FetchUsersDto> {
+    // Users can only update their own profile
+    if (currentUser.sub !== id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['tenant'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Check email uniqueness if email is being updated
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.findByEmail(dto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Email already in use');
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.fullName !== undefined) user.fullName = dto.fullName;
+
+    const updatedUser = await this.usersRepository.save(user);
+    return plainToInstance(FetchUsersDto, updatedUser, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async changePassword(id: string, dto: ChangePasswordDto, currentUser: JwtUser): Promise<void> {
+    // Users can only change their own password
+    if (currentUser.sub !== id) {
+      throw new ForbiddenException('You can only change your own password');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Hash and update new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(dto.newPassword, saltRounds);
+    await this.usersRepository.update(id, { password: hashedPassword });
+  }
+
+  async deleteUser(id: string, currentUser: JwtUser, tenantId: string): Promise<void> {
+    const user = await this.usersRepository.findOne({
+      where: { id, tenant: { id: tenantId } },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Only SUPER_ADMIN can delete users
+    if (currentUser.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can delete users');
+    }
+
+    // Cannot delete yourself
+    if (currentUser.sub === id) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    // Cannot delete SUPER_ADMIN users
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot delete super admin users');
+    }
+
+    await this.usersRepository.remove(user);
+  }
+
+  async toggleUserStatus(id: string, currentUser: JwtUser, tenantId: string): Promise<FetchUsersDto> {
+    const user = await this.usersRepository.findOne({
+      where: { id, tenant: { id: tenantId } },
+      relations: ['tenant'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Only SUPER_ADMIN or ADMIN can toggle user status
+    if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only super admins and admins can toggle user status');
+    }
+
+    // Cannot toggle your own status
+    if (currentUser.sub === id) {
+      throw new BadRequestException('You cannot change your own status');
+    }
+
+    // ADMIN cannot toggle SUPER_ADMIN status
+    if (currentUser.role === UserRole.ADMIN && user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Admins cannot change super admin status');
+    }
+
+    user.isActive = !user.isActive;
+    const updatedUser = await this.usersRepository.save(user);
+    return plainToInstance(FetchUsersDto, updatedUser, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async getCurrentUserProfile(userId: string): Promise<FetchUsersDto> {
+    return this.findById(userId);
   }
 }

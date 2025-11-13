@@ -1,21 +1,24 @@
 import {
-  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
-  Post,
+  Put,
   Query,
-  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dtos/create-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { FetchUsersDto } from './dtos/fetch-users.dto';
 import { PaginationResult } from 'src/common/interfaces';
 import { TenantsService } from 'src/tenant/tenants.service';
+import { GetUser } from 'src/common/get-user-decorator';
+import type { JwtUser } from 'src/common/interfaces';
 
 @ApiTags('Users Controller')
 @ApiBearerAuth('access-token')
@@ -23,15 +26,13 @@ import { TenantsService } from 'src/tenant/tenants.service';
 export class UsersController {
   constructor(private usersService: UsersService, private tenantsService: TenantsService) {}
 
-  @Get(':id')
-  async getUser(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  // Helper method to get tenantId from user
+  private getTenantId(user: JwtUser): string {
+    if (!user.tenantId) {
+      throw new NotFoundException('User must be associated with a tenant');
+    }
+    return user.tenantId;
   }
-
-  // @Post()
-  // async createUser(@Body() dto: CreateUserDto) {
-  //   return this.usersService.createUser(dto);
-  // }
 
   @Get()
   @ApiOperation({ summary: 'Get paginated list of users', description: 'Returns users with pagination, sorting, and optional search.' })
@@ -50,7 +51,7 @@ export class UsersController {
             id: '123e4567-e89b-12d3-a456-426614174000',
             email: 'user@example.com',
             role: 'admin',
-            name: 'Hamza Rihani',
+            fullName: 'Hamza Rihani',
             createdAt: '2025-09-14T20:00:00.000Z',
             updatedAt: '2025-09-14T21:00:00.000Z',
           },
@@ -62,12 +63,83 @@ export class UsersController {
     },
   })
   async getUsers(
-    @Query() paginationDto: PaginationDto, @Req() req
+    @Query() paginationDto: PaginationDto,
+    @GetUser() user: JwtUser,
   ): Promise<PaginationResult<FetchUsersDto>> {
-
-    const tenantId: string = req.user.tenantId;
-    if (!tenantId) throw new NotFoundException('Tenant required');
-
+    const tenantId = this.getTenantId(user);
     return this.usersService.findUsers(paginationDto, tenantId);
+  }
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile fetched successfully', type: FetchUsersDto })
+  async getCurrentUserProfile(@GetUser() user: JwtUser): Promise<FetchUsersDto> {
+    return this.usersService.getCurrentUserProfile(user.sub);
+  }
+
+  @Put('profile')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully', type: FetchUsersDto })
+  async updateUserProfile(
+    @Body() dto: UpdateUserProfileDto,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchUsersDto> {
+    return this.usersService.updateUserProfile(user.sub, dto, user);
+  }
+
+  @Put('profile/password')
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @GetUser() user: JwtUser,
+  ): Promise<{ message: string }> {
+    await this.usersService.changePassword(user.sub, dto, user);
+    return { message: 'Password changed successfully' };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User fetched successfully', type: FetchUsersDto })
+  async getUser(
+    @Param('id') id: string,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchUsersDto> {
+    return this.usersService.findById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update user (Super Admin/Admin only)' })
+  @ApiResponse({ status: 200, description: 'User updated successfully', type: FetchUsersDto })
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchUsersDto> {
+    const tenantId = this.getTenantId(user);
+    return this.usersService.updateUser(id, dto, user, tenantId);
+  }
+
+  @Put(':id/toggle-status')
+  @ApiOperation({ summary: 'Toggle user active status (Super Admin/Admin only)' })
+  @ApiResponse({ status: 200, description: 'User status toggled successfully', type: FetchUsersDto })
+  async toggleUserStatus(
+    @Param('id') id: string,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchUsersDto> {
+    const tenantId = this.getTenantId(user);
+    return this.usersService.toggleUserStatus(id, user, tenantId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete user (Super Admin only)' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  async deleteUser(
+    @Param('id') id: string,
+    @GetUser() user: JwtUser,
+  ): Promise<{ message: string }> {
+    const tenantId = this.getTenantId(user);
+    await this.usersService.deleteUser(id, user, tenantId);
+    return { message: 'User deleted successfully' };
   }
 }

@@ -9,8 +9,9 @@ export interface PaginationResult<T> {
 
 export interface JwtUser {
   sub: string;
-  email: string;
+  email?: string;
   role: UserRole;
+  tenantId?: string;
   iat: number,
   exp: number
 }

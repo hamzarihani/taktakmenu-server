@@ -18,7 +18,7 @@ export class Plan {
   price: number;
 
   @Expose()
-  @Column({ default: 'USD' })
+  @Column({ default: 'TND' })
   currency: string;
 
   @Expose()

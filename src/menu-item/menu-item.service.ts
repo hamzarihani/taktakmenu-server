@@ -1,0 +1,206 @@
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MenuItem } from './entities/menu-item.entity';
+import { CreateMenuItemDto } from './dtos/create-menu-item.dto';
+import { UpdateMenuItemDto } from './dtos/update-menu-item.dto';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { PaginationResult } from 'src/common/interfaces';
+import { FileService } from 'src/file/file.service';
+import { Image } from 'src/file/entities/image.entity';
+import { plainToInstance } from 'class-transformer';
+import { MenuCategoryService } from 'src/menu-category/menu-category.service';
+import { MenuCategory } from 'src/menu-category/entities/menu-category.entity';
+import { FetchMenuItemDto } from './dtos/fetch-menu-item.dto';
+
+@Injectable()
+export class MenuItemService {
+  constructor(
+    @InjectRepository(MenuItem)
+    private menuItemRepository: Repository<MenuItem>,
+    private fileService: FileService,
+    @Inject(forwardRef(() => MenuCategoryService))
+    private menuCategoryService: MenuCategoryService,
+  ) {}
+
+  async createItem(
+    dto: CreateMenuItemDto,
+    tenantId: string,
+    userId: string,
+    imageFile?: Express.Multer.File,
+  ): Promise<FetchMenuItemDto> {
+    try {
+      // Verify category exists and belongs to tenant
+      const category = await this.menuCategoryService.findCategoryById(dto.categoryId, tenantId);
+
+      let image: Image | null = null;
+
+      if (imageFile) {
+        image = await this.fileService.uploadImage(imageFile, tenantId, userId, 'items');
+      }
+
+      const item = this.menuItemRepository.create({
+        name: dto.name,
+        description: dto.description,
+        price: dto.price,
+        image,
+        category: { id: dto.categoryId },
+        categoryId: dto.categoryId,
+        tenant: { id: tenantId },
+        tenantId,
+        createdBy: { id: userId },
+      });
+
+      const savedItem = await this.menuItemRepository.save(item);
+
+      // Reload category with relations
+      const categoryWithRelations = await this.menuItemRepository.findOne({
+        where: { id: savedItem.id, tenantId },
+        relations: ['image', 'createdBy'],
+      });
+
+      return plainToInstance(FetchMenuItemDto, categoryWithRelations, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Failed to create menu item');
+    }
+  }
+
+  async findItems(
+    paginationDto: PaginationDto,
+    tenantId: string,
+    categoryId?: string,
+  ): Promise<PaginationResult<FetchMenuItemDto>> {
+    const { page, limit, sortBy, sortOrder, search } = paginationDto;
+    const offset = (page - 1) * limit;
+
+    try {
+      const columns = this.menuItemRepository.metadata.columns.map(
+        (col) => col.propertyName,
+      );
+
+      if (sortBy && !columns.includes(sortBy)) {
+        throw new BadRequestException(`Cannot sort by '${sortBy}'`);
+      }
+
+      const query = this.menuItemRepository
+        .createQueryBuilder('item')
+        .where('item.tenantId = :tenantId', { tenantId })
+        .leftJoinAndSelect('item.category', 'category')
+        .leftJoinAndSelect('item.image', 'image');
+
+      if (categoryId) {
+        query.andWhere('item.categoryId = :categoryId', { categoryId });
+      }
+
+      if (search) {
+        const searchConditions = columns
+          .filter((col) => !['id', 'createdAt', 'updatedAt', 'tenantId', 'categoryId'].includes(col))
+          .map((col) => `CAST(item.${col} AS CHAR) LIKE :search`)
+          .join(' OR ');
+
+        query.andWhere(`(${searchConditions})`, {
+          search: `%${search.toLowerCase()}%`,
+        });
+      }
+
+      const totalElements = await query.getCount();
+
+      if (offset >= totalElements) {
+        return {
+          data: [],
+          hasNext: false,
+          totalElements,
+          totalPages: Math.ceil(totalElements / limit),
+        };
+      }
+
+      const items = await query
+        .skip(offset)
+        .take(limit)
+        .orderBy(`item.${sortBy || 'createdAt'}`, (sortOrder || 'DESC').toUpperCase() as 'ASC' | 'DESC')
+        .getMany();
+
+      const data = plainToInstance(FetchMenuItemDto, items, {
+        excludeExtraneousValues: true,
+      });
+
+      const totalPages = Math.ceil(totalElements / limit);
+      const hasNext = page < totalPages;
+
+      return { data, hasNext, totalElements, totalPages };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException('Failed to fetch menu items');
+    }
+  }
+
+  async findItemById(id: string, tenantId: string): Promise<MenuItem> {
+    const item = await this.menuItemRepository.findOne({
+      where: { id, tenantId },
+      relations: ['category', 'image'],
+    });
+
+    if (!item) {
+      throw new NotFoundException(`Menu item with ID ${id} not found`);
+    }
+
+    return item;
+  }
+
+  async updateItem(
+    id: string,
+    dto: UpdateMenuItemDto,
+    tenantId: string,
+    userId: string,
+    imageFile?: Express.Multer.File,
+  ): Promise<MenuItem> {
+    const item = await this.findItemById(id, tenantId);
+
+    // Handle category change
+    if (dto.categoryId && dto.categoryId !== item.categoryId) {
+      // Verify new category exists and belongs to tenant
+      await this.menuCategoryService.findCategoryById(dto.categoryId, tenantId);
+      item.categoryId = dto.categoryId;
+      item.category = { id: dto.categoryId } as MenuCategory;
+    }
+
+    // Handle image update
+    if (imageFile) {
+      // Delete old image if exists
+      if (item.image) {
+        await this.fileService.deleteImage(item.image.id, tenantId);
+      }
+      // Upload new image
+      item.image = await this.fileService.uploadImage(imageFile, tenantId, userId, 'items');
+    }
+
+    // Update other fields
+    if (dto.name) item.name = dto.name;
+    if (dto.description !== undefined) item.description = dto.description;
+    if (dto.price !== undefined) item.price = dto.price;
+
+    return await this.menuItemRepository.save(item);
+  }
+
+  async deleteItem(id: string, tenantId: string): Promise<void> {
+    const item = await this.findItemById(id, tenantId);
+
+    // Delete associated image
+    if (item.image) {
+      await this.fileService.deleteImage(item.image.id, tenantId);
+    }
+
+    await this.menuItemRepository.remove(item);
+  }
+}
+

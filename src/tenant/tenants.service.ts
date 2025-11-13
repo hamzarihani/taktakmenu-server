@@ -18,6 +18,8 @@ import { UsersService } from 'src/users/users.service';
 import { UserRole } from 'src/users/entities/user.entity';
 import { PlansService } from 'src/plan/plans.service';
 import { SubscriptionsService } from 'src/subscriptions/subscriptions.service';
+import { FileService } from 'src/file/file.service';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class TenantsService {
@@ -30,6 +32,7 @@ export class TenantsService {
     private plansService: PlansService,
     @Inject(forwardRef(() => SubscriptionsService))
     private subscriptionsService: SubscriptionsService,
+    private fileService: FileService,
   ) {}
 
   async findTenants(
@@ -154,14 +157,64 @@ export class TenantsService {
     }
   }
 
-  async updateTenant(id: string, data: Partial<Tenant>): Promise<Tenant> {
+  async updateTenant(
+    id: string,
+    data: Partial<Tenant>,
+    user: JwtUser,
+    logoFile?: Express.Multer.File,
+  ): Promise<Tenant> {
     const tenant = await this.findById(id);
-    Object.assign(tenant, data);
+
+    // Check if user is SUPER_ADMIN and belongs to this tenant
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can update tenant profile');
+    }
+
+    if (user.tenantId && user.tenantId !== tenant.id) {
+      throw new ForbiddenException('You can only update your own tenant profile');
+    }
+
+    // Handle logo upload
+    if (logoFile) {
+      // Delete old logo if exists (if logo is stored as image ID)
+      // For now, we'll store the image ID in the logo field
+      // You may need to adjust this based on your storage strategy
+      if (tenant.logo) {
+        try {
+          // Try to delete old logo image if it's a valid UUID
+          await this.fileService.deleteImage(tenant.logo, tenant.id);
+        } catch (error) {
+          // Logo might not be an image ID, ignore error
+        }
+      }
+
+      // Upload new logo
+      const logoImage = await this.fileService.uploadImage(
+        logoFile,
+        tenant.id,
+        user.sub,
+        'logos',
+      );
+
+      // Store image ID in logo field
+      tenant.logo = logoImage.id;
+    }
+
+    // Update other fields
+    if (data.name !== undefined) tenant.name = data.name;
+    if (data.description !== undefined) tenant.description = data.description;
+    if (data.address !== undefined) tenant.address = data.address;
+    if (data.phone !== undefined) tenant.phone = data.phone;
+    if (data.openingHours !== undefined) tenant.openingHours = data.openingHours;
+    if (data.themeColor !== undefined) tenant.themeColor = data.themeColor;
+    if (data.showInfoToClients !== undefined) tenant.showInfoToClients = data.showInfoToClients;
+
     return this.tenantsRepository.save(tenant);
   }
 
   async deleteTenant(id: string): Promise<void> {
     const tenant = await this.findById(id);
+    // Delete tenant - CASCADE will automatically delete all related images from database
     await this.tenantsRepository.remove(tenant);
   }
 }

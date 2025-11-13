@@ -17,13 +17,20 @@ import { UpdatePlanDto } from './dtos/update-plan.dto';
 import { CreatePlanDto } from './dtos/create-plan.dto';
 
 @ApiTags('Plans Controller')
-@ApiBearerAuth('access-token')
 @Controller('plans')
 export class PlansController {
   constructor(private plansService: PlansService) {}
 
+  @Get('public')
+  @ApiOperation({ summary: 'Get all plans (Public)', description: 'Returns all available plans. No authentication required.' })
+  @ApiResponse({ status: 200, description: 'Plans fetched successfully', type: [Plan] })
+  async getPublicPlans(): Promise<Plan[]> {
+    return this.plansService.findPublicPlans();
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get paginated list of tenants', description: 'Returns tenants with pagination, sorting, and optional search.' })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of plans', description: 'Returns plans with pagination, sorting, and optional search.' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Number of items per page', example: 10 })
   @ApiQuery({ name: 'sortBy', required: true, type: String, description: 'Field to sort by', example: 'createdAt' })
@@ -42,6 +49,7 @@ export class PlansController {
 
   // 🔹 POST: Create new plan
   @Post()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new plan' })
   @ApiBody({ type: CreatePlanDto })
   async createPlan(@Body() dto: CreatePlanDto): Promise<Plan> {

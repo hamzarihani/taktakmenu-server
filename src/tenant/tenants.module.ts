@@ -6,6 +6,7 @@ import { TenantsController } from './tenants.controller';
 import { UsersModule } from 'src/users/users.module';
 import { SubscriptionsModule } from 'src/subscriptions/subscriptions.module';
 import { PlansModule } from 'src/plan/plans.module';
+import { FileModule } from 'src/file/file.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PlansModule } from 'src/plan/plans.module';
     forwardRef(() => UsersModule),
     forwardRef(() => SubscriptionsModule),
     forwardRef(() => PlansModule),
+    FileModule,
   ],
   controllers: [TenantsController],
   providers: [TenantsService],

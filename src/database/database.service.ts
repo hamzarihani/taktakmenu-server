@@ -7,8 +7,18 @@ export class DatabaseService {
 
   /**
    * Run a raw SQL query
+   * 
+   * ⚠️ SECURITY NOTE: Always use parameterized queries (params array) to prevent SQL injection.
+   * Never concatenate user input directly into SQL strings.
+   * 
+   * ✅ SAFE: query('SELECT * FROM users WHERE id = ?', [userId])
+   * ❌ UNSAFE: query(`SELECT * FROM users WHERE id = ${userId}`)
    */
   async query<T = any>(sql: string, params?: any[]): Promise<T> {
+    // Ensure params are provided for queries that need them
+    if (!params && sql.includes('?')) {
+      throw new Error('SQL query contains placeholders but no parameters provided');
+    }
     return this.dataSource.query(sql, params);
   }
 

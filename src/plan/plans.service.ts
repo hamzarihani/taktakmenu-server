@@ -110,4 +110,13 @@ export class PlansService {
     await this.plansRepository.remove(plan);
     return { message: 'Plan deleted successfully' };
   }
+
+  async findPublicPlans(): Promise<Plan[]> {
+    const plans = await this.plansRepository.find({
+      order: { price: 'ASC' },
+    });
+    return plainToInstance(Plan, plans, {
+      excludeExtraneousValues: true,
+    });
+  }
 }
