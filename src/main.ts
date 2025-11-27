@@ -55,18 +55,56 @@ async function bootstrap() {
   // ============================================
   app.enableCors({
     origin: (origin, callback) => {
+      // Base domains that should allow all subdomains
+      const allowedBaseDomains = [
+        'taktakmenu.com',
+        // Add more base domains here, e.g.:
+        // 'example.com',
+        // 'anotherdomain.com',
+      ];
+
+      // Specific origins (exact matches)
       const allowedOrigins = [
         'http://localhost:3000',
         'https://taktakmenu.com',
         process.env.FRONTEND_URL,
       ].filter(Boolean);
 
+      // Helper function to check if origin matches base domain or any subdomain
+      const isAllowedDomain = (originUrl: string): boolean => {
+        try {
+          const url = new URL(originUrl);
+          const hostname = url.hostname;
+
+          // Check exact matches first
+          if (allowedOrigins.includes(originUrl)) {
+            return true;
+          }
+
+          // Check if it matches any base domain or its subdomains
+          for (const baseDomain of allowedBaseDomains) {
+            // Exact match
+            if (hostname === baseDomain) {
+              return true;
+            }
+            // Subdomain match (e.g., subdomain.taktakmenu.com)
+            if (hostname.endsWith(`.${baseDomain}`)) {
+              return true;
+            }
+          }
+
+          return false;
+        } catch (error) {
+          return false;
+        }
+      };
+
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
+      if (isAllowedDomain(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
