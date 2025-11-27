@@ -30,6 +30,10 @@ export class MenuCategory {
   description: string | null;
 
   @Expose()
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Expose()
   @OneToOne(() => Image, { nullable: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   image: Image | null;

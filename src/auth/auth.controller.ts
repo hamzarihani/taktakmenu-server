@@ -54,6 +54,22 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @ApiBody({
+    description: 'Login for system administrators only',
+    type: LoginDto,
+    examples: {
+      sysAdminLogin: {
+        summary: 'Example sys admin login',
+        value: { email: 'sysadmin@taktakmenu.com', password: 'sysadmin555' },
+      },
+    },
+  })
+  @Post('login-sys-admin')
+  @HttpCode(200)
+  loginSysAdmin(@Body() dto: LoginDto) {
+    return this.authService.loginSysAdmin(dto);
+  }
+
   @ApiHeader({
     name: 'x-refresh-token',
     description: 'Refresh token received during login',

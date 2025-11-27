@@ -1,47 +1,81 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { FetchUsersDto } from 'src/users/dtos/fetch-users.dto';
 
-export class FetchTenantDto {
+class ImageDto {
+  @ApiProperty()
   @Expose()
   id: string;
 
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  originalName: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  mimeType: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  size: number | null;
+}
+
+export class FetchTenantDto {
+  @ApiProperty()
+  @Expose()
+  id: string;
+
+  @ApiProperty()
   @Expose()
   name: string;
 
+  @ApiProperty()
   @Expose()
   subdomain: string;
 
+  @ApiProperty({ type: () => ImageDto, required: false, nullable: true })
   @Expose()
-  logo: string;
+  @Type(() => ImageDto)
+  logo?: ImageDto | null;
 
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  description: string;
+  description?: string | null;
 
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  address: string;
+  address?: string | null;
 
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  phone: string;
+  phone?: string | null;
 
+  @ApiProperty()
   @Expose()
   email: string;
 
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  openingHours: string;
+  openingHours?: string | null;
 
+  @ApiProperty()
   @Expose()
   showInfoToClients: boolean;
 
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  themeColor: string;
+  themeColor?: string | null;
 
+  @ApiProperty({ type: () => [FetchUsersDto] })
   @Expose()
   @Type(() => FetchUsersDto)
   users: FetchUsersDto[];
 
+  @ApiProperty()
   @Expose()
   createdAt: Date;
 
+  @ApiProperty()
   @Expose()
   updatedAt: Date;
 }

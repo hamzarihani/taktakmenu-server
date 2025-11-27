@@ -30,6 +30,10 @@ export class Plan {
   features: string[];
 
   @Expose()
+  @Column({ default: false })
+  isPopular: boolean;
+
+  @Expose()
   @OneToMany(() => Subscription, (subscription) => subscription.plan)
   tenants: Subscription[];
 

@@ -19,4 +19,7 @@ export class FetchPlanDto {
 
   @Expose()
   features: string[];
+
+  @Expose()
+  isPopular: boolean;
 }

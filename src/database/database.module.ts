@@ -19,12 +19,25 @@ import { User } from 'src/users/entities/user.entity';
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true, // automatically load entity files
         synchronize: true, // ❌ don't use true in production
-        ssl: true, // ✅ Hostinger requires SSL for remote MySQL
+        ssl: configService.get<string>('DB_SSL') === 'true' || false, // Enable SSL if DB_SSL=true
         extra: {
-          ssl: {
+          ssl: configService.get<string>('DB_SSL') === 'true' ? {
             rejectUnauthorized: false,
-          },
+          } : undefined,
+          // Connection pool settings to prevent ECONNRESET errors
+          connectionLimit: 10,
+          acquireTimeout: 60000, // 60 seconds
+          timeout: 60000, // 60 seconds
+          reconnect: true,
+          // Keep connection alive
+          keepAliveInitialDelay: 0,
+          enableKeepAlive: true,
         },
+        // Connection retry settings
+        retryAttempts: 3,
+        retryDelay: 3000, // 3 seconds
+        // Logging for debugging
+        logging: configService.get<string>('NODE_ENV') === 'development' ? ['error', 'warn'] : ['error'],
       }),
     }),
     TypeOrmModule.forFeature([User]),

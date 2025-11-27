@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, IsUUID, Min } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsUUID, Min, IsBoolean } from 'class-validator';
 
 export class UpdateMenuItemDto {
   @ApiProperty({ example: 'Caesar Salad', description: 'Item name', required: false })
@@ -17,6 +17,11 @@ export class UpdateMenuItemDto {
   @IsNumber()
   @Min(0)
   price?: number;
+
+  @ApiProperty({ example: true, description: 'Whether the item is active', required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @ApiProperty({ example: 'uuid-of-category', description: 'Category ID', required: false })
   @IsOptional()

@@ -53,6 +53,22 @@ export class FileService {
   }
 
   /**
+   * Get image by ID without tenant validation (for public access)
+   */
+  async findByIdPublic(id: string, includeData: boolean = true): Promise<Image> {
+    const image = await this.imageRepository.findOne({
+      where: { id },
+      relations: ['tenant', 'createdBy'],
+    });
+
+    if (!image) {
+      throw new NotFoundException(`Image with ID ${id} not found`);
+    }
+
+    return image;
+  }
+
+  /**
    * Get image by ID (with tenant validation)
    */
   async findById(id: string, tenantId: string, includeData: boolean = true): Promise<Image> {

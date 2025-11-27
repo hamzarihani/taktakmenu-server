@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -53,23 +54,14 @@ export class MenuItemController {
   // ========== Public Endpoints (No Auth Required) ==========
 
   @Get('public/category/:categoryId')
-  @ApiOperation({ summary: 'Get menu items by category ID (Public)' })
-  @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
-  @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Number of items per page', example: 10 })
-  @ApiQuery({ name: 'sortBy', required: true, type: String, description: 'Field to sort by', example: 'createdAt' })
-  @ApiQuery({ name: 'sortOrder', required: true, type: String, enum: ['ASC', 'DESC'], description: 'Sort order', example: 'DESC' })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search string' })
-  @ApiResponse({ status: 200, description: 'Items fetched successfully' })
+  @ApiOperation({ summary: 'Get all menu items by category ID (Public)' })
+  @ApiResponse({ status: 200, description: 'Items fetched successfully', type: [FetchMenuItemDto] })
   async getItemsByCategoryPublic(
     @Param('categoryId') categoryId: string,
-    @Query() paginationDto: PaginationDto,
     @GetSubdomain() subdomain: string,
-  ): Promise<PaginationResult<FetchMenuItemDto>> {
-    if (!paginationDto.page || !paginationDto.limit) {
-      throw new BadRequestException('page and limit are required');
-    }
+  ): Promise<FetchMenuItemDto[]> {
     const tenant = await this.tenantsService.findBySubdomain(subdomain);
-    return this.menuItemService.findItems(paginationDto, tenant.id, categoryId);
+    return this.menuItemService.findAllItemsByCategory(tenant.id, categoryId);
   }
 
   // ========== Protected Endpoints (Auth Required) ==========
@@ -149,15 +141,33 @@ export class MenuItemController {
   @ApiOperation({ summary: 'Update a menu item' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('image'))
-  @ApiResponse({ status: 200, description: 'Item updated successfully', type: MenuItem })
+  @ApiResponse({ status: 200, description: 'Item updated successfully', type: FetchMenuItemDto })
   async updateItem(
     @Param('id') id: string,
     @Body() dto: UpdateMenuItemDto,
     @UploadedFile() imageFile: Express.Multer.File,
     @GetUser() user: JwtUser,
-  ): Promise<MenuItem> {
+  ): Promise<FetchMenuItemDto> {
     const tenantId = await this.getTenantId(user);
     return this.menuItemService.updateItem(id, dto, tenantId, user.sub, imageFile);
+  }
+
+  @Patch(':id/toggle')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Enable or disable a menu item' })
+  @ApiQuery({ name: 'action', required: true, enum: ['enable', 'disable'], description: 'Action to perform: enable or disable' })
+  @ApiResponse({ status: 200, description: 'Item status updated successfully', type: FetchMenuItemDto })
+  async toggleItem(
+    @Param('id') id: string,
+    @Query('action') action: 'enable' | 'disable',
+    @GetUser() user: JwtUser,
+  ): Promise<FetchMenuItemDto> {
+    if (action !== 'enable' && action !== 'disable') {
+      throw new BadRequestException('Action must be either "enable" or "disable"');
+    }
+    const tenantId = await this.getTenantId(user);
+    const isActive = action === 'enable';
+    return this.menuItemService.toggleItemStatus(id, tenantId, isActive);
   }
 
   @Delete(':id')

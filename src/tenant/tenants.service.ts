@@ -14,6 +14,7 @@ import { Tenant } from './entities/tenant.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { JwtUser, PaginationResult } from 'src/common/interfaces';
 import { CreateTenantDto } from './dtos/create-tenant.dto';
+import { FetchTenantDto } from './dtos/fetch-tenant.dto';
 import { UsersService } from 'src/users/users.service';
 import { UserRole } from 'src/users/entities/user.entity';
 import { PlansService } from 'src/plan/plans.service';
@@ -112,6 +113,20 @@ export class TenantsService {
       throw new NotFoundException(`Tenant with subdomain '${subdomain}' not found`);
     }
 
+    // Load logo image if exists and replace logo string with image object for DTO transformation
+    if (tenant.logo) {
+      try {
+        const logoImage = await this.fileService.findByIdPublic(tenant.logo, false);
+        // Replace logo string with image object for DTO transformation
+        (tenant as any).logo = logoImage;
+      } catch (error) {
+        // Image not found, set logo to null
+        (tenant as any).logo = null;
+      }
+    } else {
+      (tenant as any).logo = null;
+    }
+
     return tenant;
   }
 
@@ -162,7 +177,7 @@ export class TenantsService {
     data: Partial<Tenant>,
     user: JwtUser,
     logoFile?: Express.Multer.File,
-  ): Promise<Tenant> {
+  ): Promise<FetchTenantDto> {
     const tenant = await this.findById(id);
 
     // Check if user is SUPER_ADMIN and belongs to this tenant
@@ -202,6 +217,7 @@ export class TenantsService {
 
     // Update other fields
     if (data.name !== undefined) tenant.name = data.name;
+    if (data.email !== undefined) tenant.email = data.email;
     if (data.description !== undefined) tenant.description = data.description;
     if (data.address !== undefined) tenant.address = data.address;
     if (data.phone !== undefined) tenant.phone = data.phone;
@@ -209,7 +225,25 @@ export class TenantsService {
     if (data.themeColor !== undefined) tenant.themeColor = data.themeColor;
     if (data.showInfoToClients !== undefined) tenant.showInfoToClients = data.showInfoToClients;
 
-    return this.tenantsRepository.save(tenant);
+    const savedTenant = await this.tenantsRepository.save(tenant);
+
+    // Load logo image if exists and replace logo string with image object for DTO transformation
+    if (savedTenant.logo) {
+      try {
+        const logoImage = await this.fileService.findByIdPublic(savedTenant.logo, false);
+        // Replace logo string with image object for DTO transformation
+        (savedTenant as any).logo = logoImage;
+      } catch (error) {
+        // Image not found, set logo to null
+        (savedTenant as any).logo = null;
+      }
+    } else {
+      (savedTenant as any).logo = null;
+    }
+
+    return plainToInstance(FetchTenantDto, savedTenant, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async deleteTenant(id: string): Promise<void> {

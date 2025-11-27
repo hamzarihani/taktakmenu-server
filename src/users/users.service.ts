@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { CreateUserByAdminDto } from './dtos/create-user-by-admin.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
@@ -64,6 +65,53 @@ export class UsersService {
     }
   }
 
+  async createUserByAdmin(
+    dto: CreateUserByAdminDto,
+    tenantId: string,
+    createdByUserId: string,
+  ): Promise<FetchUsersDto> {
+    try {
+      // Check if email already exists
+      const existingUser = await this.findByEmail(dto.email);
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
+
+      const user = this.usersRepository.create({
+        email: dto.email,
+        fullName: dto.fullName,
+        password: hashedPassword,
+        role: dto.role || UserRole.USER,
+        isActive: dto.isActive !== undefined ? dto.isActive : true,
+        tenant: { id: tenantId },
+        createdBy: { id: createdByUserId },
+      });
+
+      const savedUser = await this.usersRepository.save(user);
+
+      // Reload user with relations
+      const userWithRelations = await this.usersRepository.findOne({
+        where: { id: savedUser.id },
+        relations: ['tenant', 'createdBy'],
+      });
+
+      return plainToInstance(FetchUsersDto, userWithRelations, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error: any) {
+      if (error instanceof ConflictException || error instanceof BadRequestException) {
+        throw error;
+      }
+      if (error.code === '23505') {
+        throw new ConflictException('User with this email already exists');
+      }
+      throw new InternalServerErrorException('Failed to create user');
+    }
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email }, relations: ['tenant'] });
   }
@@ -72,7 +120,7 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({
         where: { id },
-        relations: ['tenant'],
+        relations: ['tenant', 'createdBy'],
       });
 
       if (!user) {
@@ -104,7 +152,10 @@ export class UsersService {
         throw new BadRequestException(`Cannot sort by ${sortBy}`);
       }
 
-      const query = this.usersRepository.createQueryBuilder('user').where('user.tenantId = :tenantId', { tenantId });
+      const query = this.usersRepository
+        .createQueryBuilder('user')
+        .where('user.tenantId = :tenantId', { tenantId })
+        .leftJoinAndSelect('user.createdBy', 'createdBy');
 
       if (search) {
         const searchConditions = columns
@@ -182,9 +233,14 @@ export class UsersService {
       throw new ForbiddenException('Only super admins and admins can update users');
     }
 
-    // SUPER_ADMIN can update anyone, ADMIN can only update non-SUPER_ADMIN users
+    // SUPER_ADMIN can update anyone, ADMIN can only update non-SUPER_ADMIN and non-ADMIN users
     if (currentUser.role === UserRole.ADMIN && user.role === UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Admins cannot update super admin users');
+    }
+
+    // Only SUPER_ADMIN can update ADMIN users
+    if (currentUser.role === UserRole.ADMIN && user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('Only super admins can update admin users');
     }
 
     // Check email uniqueness if email is being updated
@@ -300,7 +356,7 @@ export class UsersService {
   async toggleUserStatus(id: string, currentUser: JwtUser, tenantId: string): Promise<FetchUsersDto> {
     const user = await this.usersRepository.findOne({
       where: { id, tenant: { id: tenantId } },
-      relations: ['tenant'],
+      relations: ['tenant', 'createdBy'],
     });
 
     if (!user) {
@@ -308,8 +364,8 @@ export class UsersService {
     }
 
     // Only SUPER_ADMIN or ADMIN can toggle user status
-    if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only super admins and admins can toggle user status');
+    if (currentUser.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can toggle user status');
     }
 
     // Cannot toggle your own status
@@ -317,14 +373,16 @@ export class UsersService {
       throw new BadRequestException('You cannot change your own status');
     }
 
-    // ADMIN cannot toggle SUPER_ADMIN status
-    if (currentUser.role === UserRole.ADMIN && user.role === UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Admins cannot change super admin status');
-    }
-
     user.isActive = !user.isActive;
     const updatedUser = await this.usersRepository.save(user);
-    return plainToInstance(FetchUsersDto, updatedUser, {
+
+    // Reload user with relations to ensure createdBy is included
+    const userWithRelations = await this.usersRepository.findOne({
+      where: { id: updatedUser.id },
+      relations: ['tenant', 'createdBy'],
+    });
+
+    return plainToInstance(FetchUsersDto, userWithRelations, {
       excludeExtraneousValues: true,
     });
   }

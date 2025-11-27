@@ -34,6 +34,16 @@ class UserDto {
   email: string;
 }
 
+class CategoryDto {
+  @ApiProperty()
+  @Expose()
+  id: string;
+
+  @ApiProperty()
+  @Expose()
+  name: string;
+}
+
 export class FetchMenuItemDto {
   @ApiProperty()
   @Expose()
@@ -47,19 +57,32 @@ export class FetchMenuItemDto {
   @Expose()
   description?: string | null;
 
+  @ApiProperty()
+  @Expose()
+  price: number;
+
+  @ApiProperty()
+  @Expose()
+  isActive: boolean;
+
   @ApiProperty({ type: () => ImageDto, required: false, nullable: true })
   @Expose()
   @Type(() => ImageDto)
   image?: ImageDto | null;
 
+  @ApiProperty({ type: () => CategoryDto })
+  @Expose()
+  @Type(() => CategoryDto)
+  category: CategoryDto;
+
   @ApiProperty()
   @Expose()
   tenantId: string;
 
-  @ApiProperty({ type: () => UserDto, required: false, nullable: true })
+  @ApiProperty({ type: () => UserDto })
   @Expose()
   @Type(() => UserDto)
-  createdBy?: UserDto | null;
+  createdBy: UserDto;
 
   @ApiProperty()
   @Expose()

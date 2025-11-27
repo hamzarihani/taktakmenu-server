@@ -64,6 +64,34 @@ export class FileController {
     return this.fileService.uploadImage(file, tenantId, user.sub, folder || 'images');
   }
 
+  // ========== Public Endpoints (No Auth Required) ==========
+
+  @Get('public/:id/serve')
+  @ApiOperation({ summary: 'Serve image file from database (Public)' })
+  @ApiResponse({ status: 200, description: 'Image file served successfully' })
+  async serveImagePublic(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const image = await this.fileService.findByIdPublic(id, true);
+    
+    const imageData = this.fileService.getImageData(image);
+    
+    if (!imageData) {
+      throw new BadRequestException('Image data not found');
+    }
+    
+    res.set({
+      'Content-Type': image.mimeType || 'image/jpeg',
+      'Content-Disposition': `inline; filename="${image.originalName || 'image'}"`,
+      'Content-Length': image.size?.toString() || imageData.length.toString(),
+    });
+    
+    return new StreamableFile(imageData);
+  }
+
+  // ========== Protected Endpoints (Auth Required) ==========
+
   @Get()
   @ApiOperation({ summary: 'Get all images for the current tenant' })
   @ApiResponse({ status: 200, description: 'Images fetched successfully', type: [Image] })

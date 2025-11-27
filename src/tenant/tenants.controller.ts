@@ -26,11 +26,30 @@ import { FetchTenantDto } from './dtos/fetch-tenant.dto';
 import { GetSubdomain } from 'src/common/get-subdomain-decorator';
 import { PublicTenantProfileDto } from './dtos/public-tenant-profile.dto';
 import { plainToInstance } from 'class-transformer';
+import { UsersService } from 'src/users/users.service';
+import { NotFoundException } from '@nestjs/common';
 
 @ApiTags('Tenants Controller')
 @Controller('tenants')
 export class TenantsController {
-  constructor(private tenantsService: TenantsService) {}
+  constructor(
+    private tenantsService: TenantsService,
+    private usersService: UsersService,
+  ) {}
+
+  // Helper method to get tenantId from user
+  private async getTenantId(user: JwtUser): Promise<string> {
+    // First try to get from JWT payload
+    if (user.tenantId) {
+      return user.tenantId;
+    }
+    // Fallback: load from user entity
+    const userEntity = await this.usersService.findById(user.sub);
+    if (!userEntity.tenant?.id) {
+      throw new NotFoundException('User must be associated with a tenant');
+    }
+    return userEntity.tenant.id;
+  }
 
   // ========== Public Endpoints (No Auth Required) ==========
 
@@ -49,6 +68,21 @@ export class TenantsController {
   }
 
   // ========== Protected Endpoints (Auth Required) ==========
+
+  @Get('info')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get tenant profile from authenticated user token' })
+  @ApiResponse({ status: 200, description: 'Tenant profile fetched successfully', type: Tenant })
+  async getTenantProfile(
+    @GetUser() user: JwtUser,
+  ): Promise<Tenant> {
+    const tenantId = await this.getTenantId(user);
+    const tenant = await this.tenantsService.findById(tenantId);
+    
+    return plainToInstance(Tenant, tenant, {
+      excludeExtraneousValues: true,
+    });
+  }
 
   @Get()
   @ApiBearerAuth('access-token')
@@ -86,13 +120,13 @@ export class TenantsController {
   @ApiOperation({ summary: 'Update tenant profile (Super Admin only)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo'))
-  @ApiResponse({ status: 200, description: 'Tenant updated successfully', type: Tenant })
+  @ApiResponse({ status: 200, description: 'Tenant updated successfully', type: FetchTenantDto })
   async updateTenant(
     @Param('id') id: string,
     @Body() dto: UpdateTenantDto,
     @UploadedFile() logoFile: Express.Multer.File,
     @GetUser() user: JwtUser,
-  ): Promise<Tenant> {
+  ): Promise<FetchTenantDto> {
     return this.tenantsService.updateTenant(id, dto, user, logoFile);
   }
 

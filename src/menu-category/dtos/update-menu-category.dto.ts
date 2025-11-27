@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class UpdateMenuCategoryDto {
   @ApiProperty({ example: 'Appetizers', description: 'Category name', required: false })
@@ -11,6 +11,11 @@ export class UpdateMenuCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ example: true, description: 'Whether the category is active', required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Category image file' })
   @IsOptional()

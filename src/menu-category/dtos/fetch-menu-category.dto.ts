@@ -47,6 +47,10 @@ export class FetchMenuCategoryDto {
   @Expose()
   description?: string | null;
 
+  @ApiProperty()
+  @Expose()
+  isActive: boolean;
+
   @ApiProperty({ type: () => ImageDto, required: false, nullable: true })
   @Expose()
   @Type(() => ImageDto)

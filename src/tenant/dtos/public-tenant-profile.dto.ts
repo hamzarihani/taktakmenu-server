@@ -1,5 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
+
+class ImageDto {
+  @ApiProperty()
+  @Expose()
+  id: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  originalName: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  mimeType: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @Expose()
+  size: number | null;
+}
 
 export class PublicTenantProfileDto {
   @ApiProperty()
@@ -14,9 +32,14 @@ export class PublicTenantProfileDto {
   @Expose()
   subdomain: string;
 
-  @ApiProperty({ required: false, nullable: true })
+  @ApiProperty()
   @Expose()
-  logo: string | null;
+  email: string;
+
+  @ApiProperty({ type: () => ImageDto, required: false, nullable: true })
+  @Expose()
+  @Type(() => ImageDto)
+  logo?: ImageDto | null;
 
   @ApiProperty({ required: false, nullable: true })
   @Expose()

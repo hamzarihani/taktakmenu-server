@@ -5,10 +5,12 @@ import {
   Get,
   NotFoundException,
   Param,
+  Post,
   Put,
   Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { CreateUserByAdminDto } from './dtos/create-user-by-admin.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
@@ -19,6 +21,8 @@ import { PaginationResult } from 'src/common/interfaces';
 import { TenantsService } from 'src/tenant/tenants.service';
 import { GetUser } from 'src/common/get-user-decorator';
 import type { JwtUser } from 'src/common/interfaces';
+import { UserRole } from './entities/user.entity';
+import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('Users Controller')
 @ApiBearerAuth('access-token')
@@ -32,6 +36,22 @@ export class UsersController {
       throw new NotFoundException('User must be associated with a tenant');
     }
     return user.tenantId;
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new user (Super Admin only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully', type: FetchUsersDto })
+  async createUser(
+    @Body() dto: CreateUserByAdminDto,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchUsersDto> {
+    // Only SUPER_ADMIN can create users
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can create users');
+    }
+
+    const tenantId = this.getTenantId(user);
+    return this.usersService.createUserByAdmin(dto, tenantId, user.sub);
   }
 
   @Get()
@@ -109,13 +129,17 @@ export class UsersController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update user (Super Admin/Admin only)' })
+  @ApiOperation({ summary: 'Update user. Only Super Admin can update Admin users.' })
   @ApiResponse({ status: 200, description: 'User updated successfully', type: FetchUsersDto })
   async updateUser(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
     @GetUser() user: JwtUser,
   ): Promise<FetchUsersDto> {
+    // Only SUPER_ADMIN can update users
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can update users');
+    }
     const tenantId = this.getTenantId(user);
     return this.usersService.updateUser(id, dto, user, tenantId);
   }
@@ -127,6 +151,10 @@ export class UsersController {
     @Param('id') id: string,
     @GetUser() user: JwtUser,
   ): Promise<FetchUsersDto> {
+    // Only SUPER_ADMIN can update users
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can update users');
+    }
     const tenantId = this.getTenantId(user);
     return this.usersService.toggleUserStatus(id, user, tenantId);
   }

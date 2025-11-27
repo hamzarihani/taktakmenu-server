@@ -67,6 +67,30 @@ export class AuthService {
     if (!user.isActive) {
       throw new UnauthorizedException('Account is deactivated. Contact support.');
     }
+
+    // Block sys admin from regular login
+    if (user.role === UserRole.SYS_ADMIN) {
+      throw new UnauthorizedException('Sys admins must use the sys admin login endpoint');
+    }
+    
+    return this.generateTokens(user);
+  }
+
+  async loginSysAdmin(dto: LoginDto) {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const valid = await bcrypt.compare(dto.password, user.password);
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated. Contact support.');
+    }
+
+    // Only allow sys admin
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new UnauthorizedException('This endpoint is only for system administrators');
+    }
     
     return this.generateTokens(user);
   }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsDecimal, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsDecimal, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreatePlanDto {
   @ApiProperty({ example: 'Pro Plan', description: 'Plan name (unique)' })
@@ -17,7 +17,7 @@ export class CreatePlanDto {
   @IsOptional()
   currency?: string;
 
-  @ApiProperty({ example: 'month', description: 'Billing period (month/year)', default: 'month' })
+  @ApiProperty({ example: 'month', description: 'Billing period (month/year)', default: 'year' })
   @IsString()
   @IsOptional()
   billingPeriod?: string;
@@ -26,4 +26,9 @@ export class CreatePlanDto {
   @IsArray()
   @IsNotEmpty()
   features: string[];
+
+  @ApiProperty({ example: false, description: 'Whether this plan is marked as popular', default: false, required: false })
+  @IsBoolean()
+  @IsOptional()
+  isPopular?: boolean;
 }

@@ -117,6 +117,7 @@ export class AppModule implements NestModule {
 
       // Authentication endpoints
       { path: 'auth/login', method: RequestMethod.ALL },
+      { path: 'auth/login-sys-admin', method: RequestMethod.ALL },
       { path: 'auth/signup', method: RequestMethod.ALL },
       { path: 'auth/refresh', method: RequestMethod.ALL },
       { path: 'auth/activate', method: RequestMethod.ALL },
@@ -129,6 +130,7 @@ export class AppModule implements NestModule {
       { path: 'menu-items/public/category/:categoryId', method: RequestMethod.GET },
       { path: 'tenants/public/profile', method: RequestMethod.GET },
       { path: 'plans/public', method: RequestMethod.GET },
+      { path: 'files/public/:id/serve', method: RequestMethod.GET },
     ];
   }
 }

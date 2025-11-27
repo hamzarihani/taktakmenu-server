@@ -79,6 +79,7 @@ async function bootstrap() {
       'Authorization',
       'X-Requested-With',
       'x-tenant-subdomain',
+      'x-refresh-token',
     ],
     exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
     maxAge: 86400, // 24 hours

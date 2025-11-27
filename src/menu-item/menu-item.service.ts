@@ -60,13 +60,13 @@ export class MenuItemService {
 
       const savedItem = await this.menuItemRepository.save(item);
 
-      // Reload category with relations
-      const categoryWithRelations = await this.menuItemRepository.findOne({
+      // Reload item with relations
+      const itemWithRelations = await this.menuItemRepository.findOne({
         where: { id: savedItem.id, tenantId },
-        relations: ['image', 'createdBy'],
+        relations: ['image', 'category', 'createdBy'],
       });
 
-      return plainToInstance(FetchMenuItemDto, categoryWithRelations, {
+      return plainToInstance(FetchMenuItemDto, itemWithRelations, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
@@ -96,7 +96,8 @@ export class MenuItemService {
         .createQueryBuilder('item')
         .where('item.tenantId = :tenantId', { tenantId })
         .leftJoinAndSelect('item.category', 'category')
-        .leftJoinAndSelect('item.image', 'image');
+        .leftJoinAndSelect('item.image', 'image')
+        .leftJoinAndSelect('item.createdBy', 'createdBy');
 
       if (categoryId) {
         query.andWhere('item.categoryId = :categoryId', { categoryId });
@@ -144,10 +145,30 @@ export class MenuItemService {
     }
   }
 
+  async findAllItemsByCategory(tenantId: string, categoryId: string): Promise<FetchMenuItemDto[]> {
+    try {
+      const items = await this.menuItemRepository
+        .createQueryBuilder('item')
+        .where('item.tenantId = :tenantId', { tenantId })
+        .andWhere('item.categoryId = :categoryId', { categoryId })
+        .leftJoinAndSelect('item.category', 'category')
+        .leftJoinAndSelect('item.image', 'image')
+        .leftJoinAndSelect('item.createdBy', 'createdBy')
+        .orderBy('item.createdAt', 'DESC')
+        .getMany();
+
+      return plainToInstance(FetchMenuItemDto, items, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch menu items');
+    }
+  }
+
   async findItemById(id: string, tenantId: string): Promise<MenuItem> {
     const item = await this.menuItemRepository.findOne({
       where: { id, tenantId },
-      relations: ['category', 'image'],
+      relations: ['category', 'image', 'createdBy'],
     });
 
     if (!item) {
@@ -163,7 +184,7 @@ export class MenuItemService {
     tenantId: string,
     userId: string,
     imageFile?: Express.Multer.File,
-  ): Promise<MenuItem> {
+  ): Promise<FetchMenuItemDto> {
     const item = await this.findItemById(id, tenantId);
 
     // Handle category change
@@ -188,8 +209,19 @@ export class MenuItemService {
     if (dto.name) item.name = dto.name;
     if (dto.description !== undefined) item.description = dto.description;
     if (dto.price !== undefined) item.price = dto.price;
+    if (dto.isActive !== undefined) item.isActive = dto.isActive;
 
-    return await this.menuItemRepository.save(item);
+    const savedItem = await this.menuItemRepository.save(item);
+
+    // Reload item with relations
+    const itemWithRelations = await this.menuItemRepository.findOne({
+      where: { id: savedItem.id, tenantId },
+      relations: ['image', 'category', 'createdBy'],
+    });
+
+    return plainToInstance(FetchMenuItemDto, itemWithRelations, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async deleteItem(id: string, tenantId: string): Promise<void> {
@@ -201,6 +233,23 @@ export class MenuItemService {
     }
 
     await this.menuItemRepository.remove(item);
+  }
+
+  async toggleItemStatus(id: string, tenantId: string, isActive: boolean): Promise<FetchMenuItemDto> {
+    const item = await this.findItemById(id, tenantId);
+    item.isActive = isActive;
+    
+    const savedItem = await this.menuItemRepository.save(item);
+
+    // Reload item with relations
+    const itemWithRelations = await this.menuItemRepository.findOne({
+      where: { id: savedItem.id, tenantId },
+      relations: ['image', 'category', 'createdBy'],
+    });
+
+    return plainToInstance(FetchMenuItemDto, itemWithRelations, {
+      excludeExtraneousValues: true,
+    });
   }
 }
 

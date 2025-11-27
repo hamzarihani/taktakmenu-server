@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -7,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Plan } from './entities/plan.entity';
+import { Subscription } from '../subscriptions/entities/subscription.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { PaginationResult } from 'src/common/interfaces';
 import { CreatePlanDto } from './dtos/create-plan.dto';
@@ -17,6 +19,8 @@ export class PlansService {
   constructor(
     @InjectRepository(Plan)
     private readonly plansRepository: Repository<Plan>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
   ) {}
 
   async findPlans(
@@ -106,6 +110,17 @@ export class PlansService {
   async deletePlan(id: string): Promise<{ message: string }> {
     const plan = await this.plansRepository.findOne({ where: { id } });
     if (!plan) throw new BadRequestException('Plan not found');
+
+    // Check if there are any subscriptions using this plan
+    const subscriptionsCount = await this.subscriptionRepository.count({
+      where: { plan: { id } },
+    });
+
+    if (subscriptionsCount > 0) {
+      throw new ConflictException(
+        `Cannot delete plan. There are ${subscriptionsCount} active subscription(s) using this plan. Please update or delete the subscriptions first.`,
+      );
+    }
 
     await this.plansRepository.remove(plan);
     return { message: 'Plan deleted successfully' };

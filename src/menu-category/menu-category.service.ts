@@ -128,6 +128,24 @@ export class MenuCategoryService {
     }
   }
 
+  async findAllCategories(tenantId: string): Promise<FetchMenuCategoryDto[]> {
+    try {
+      const categories = await this.menuCategoryRepository
+        .createQueryBuilder('category')
+        .where('category.tenantId = :tenantId', { tenantId })
+        .leftJoinAndSelect('category.image', 'image')
+        .leftJoinAndSelect('category.createdBy', 'createdBy')
+        .orderBy('category.createdAt', 'DESC')
+        .getMany();
+
+      return plainToInstance(FetchMenuCategoryDto, categories, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch menu categories');
+    }
+  }
+
   async findCategoryById(id: string, tenantId: string): Promise<MenuCategory> {
     const category = await this.menuCategoryRepository.findOne({
       where: { id, tenantId },
@@ -147,7 +165,7 @@ export class MenuCategoryService {
     tenantId: string,
     userId: string,
     imageFile?: Express.Multer.File,
-  ): Promise<MenuCategory> {
+  ): Promise<FetchMenuCategoryDto> {
     const category = await this.findCategoryById(id, tenantId);
 
     // Handle image update
@@ -163,8 +181,19 @@ export class MenuCategoryService {
     // Update other fields
     if (dto.name) category.name = dto.name;
     if (dto.description !== undefined) category.description = dto.description;
+    if (dto.isActive !== undefined) category.isActive = dto.isActive;
 
-    return await this.menuCategoryRepository.save(category);
+    const savedCategory = await this.menuCategoryRepository.save(category);
+
+    // Reload category with relations
+    const categoryWithRelations = await this.menuCategoryRepository.findOne({
+      where: { id: savedCategory.id, tenantId },
+      relations: ['image', 'createdBy'],
+    });
+
+    return plainToInstance(FetchMenuCategoryDto, categoryWithRelations, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async deleteCategory(id: string, tenantId: string): Promise<void> {
@@ -177,6 +206,23 @@ export class MenuCategoryService {
 
     // Delete category (cascade will delete items)
     await this.menuCategoryRepository.remove(category);
+  }
+
+  async toggleCategoryStatus(id: string, tenantId: string, isActive: boolean): Promise<FetchMenuCategoryDto> {
+    const category = await this.findCategoryById(id, tenantId);
+    category.isActive = isActive;
+    
+    const savedCategory = await this.menuCategoryRepository.save(category);
+
+    // Reload category with relations
+    const categoryWithRelations = await this.menuCategoryRepository.findOne({
+      where: { id: savedCategory.id, tenantId },
+      relations: ['image', 'createdBy'],
+    });
+
+    return plainToInstance(FetchMenuCategoryDto, categoryWithRelations, {
+      excludeExtraneousValues: true,
+    });
   }
 }
 
