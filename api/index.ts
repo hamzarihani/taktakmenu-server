@@ -12,11 +12,19 @@ let cachedApp: Express;
 
 async function createApp(): Promise<Express> {
   if (cachedApp) {
+    console.log('Using cached app');
     return cachedApp;
   }
 
+  console.log('Creating new app instance...');
   const expressApp = express();
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+  
+  try {
+    console.log('Initializing NestJS application...');
+    const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
+      logger: ['error', 'warn', 'log'],
+    });
+    console.log('NestJS application created');
 
   // Trust proxy for accurate IP detection behind load balancers/proxies
   expressApp.set('trust proxy', true);
@@ -180,22 +188,54 @@ async function createApp(): Promise<Express> {
     }),
   );
 
-  // Initialize the app (but don't call listen() - Vercel handles that)
-  await app.init();
-  cachedApp = expressApp;
-  return expressApp;
+    // Initialize the app (but don't call listen() - Vercel handles that)
+    console.log('Initializing app...');
+    await app.init();
+    console.log('App initialized successfully');
+    cachedApp = expressApp;
+    return expressApp;
+  } catch (error) {
+    console.error('Error creating app:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    console.log('Handler called:', req.method, req.url);
+    console.log('Environment check:', {
+      hasDbHost: !!process.env.DB_HOST,
+      hasDbUser: !!process.env.DB_USER,
+      hasDbName: !!process.env.DB_NAME,
+      nodeEnv: process.env.NODE_ENV,
+    });
+
     const app = await createApp();
+    console.log('App created successfully');
     return app(req, res);
   } catch (error) {
     console.error('Error in serverless function:', error);
-    res.status(500).json({ 
-      error: 'Internal Server Error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
     });
+
+    // Don't send response if headers already sent
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        ...(process.env.NODE_ENV !== 'production' && {
+          stack: error instanceof Error ? error.stack : undefined,
+        }),
+      });
+    }
   }
 }
 

@@ -10,13 +10,15 @@ import { User } from '../users/entities/user.entity';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USER'),
-        password: configService.get<string>('DB_PASS'),
-        database: configService.get<string>('DB_NAME'),
+      useFactory: (configService: ConfigService) => {
+        const port = configService.get<string>('DB_PORT');
+        return {
+          type: 'mysql',
+          host: configService.get<string>('DB_HOST'),
+          port: port ? parseInt(port, 10) : 3306,
+          username: configService.get<string>('DB_USER'),
+          password: configService.get<string>('DB_PASS'),
+          database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true, // automatically load entity files
         synchronize: true, // ❌ don't use true in production
         ssl: configService.get<string>('DB_SSL') === 'true' || false, // Enable SSL if DB_SSL=true
@@ -35,7 +37,8 @@ import { User } from '../users/entities/user.entity';
         retryDelay: 3000, // 3 seconds
         // Logging for debugging
         logging: configService.get<string>('NODE_ENV') === 'development' ? ['error', 'warn'] : ['error'],
-      }),
+        };
+      },
     }),
     TypeOrmModule.forFeature([User]),
   ],
