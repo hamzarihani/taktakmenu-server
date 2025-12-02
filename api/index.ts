@@ -5,12 +5,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { json, urlencoded } from 'express';
-import * as express from 'express';
+import express, { Express } from 'express';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-let cachedApp: express.Application;
+let cachedApp: Express;
 
-async function createApp(): Promise<express.Application> {
+async function createApp(): Promise<Express> {
   if (cachedApp) {
     return cachedApp;
   }
