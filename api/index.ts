@@ -21,9 +21,24 @@ async function createApp(): Promise<Express> {
   
   try {
     console.log('Initializing NestJS application...');
-    const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
+    console.log('DB Config check:', {
+      host: process.env.DB_HOST ? `${process.env.DB_HOST.substring(0, 10)}...` : 'MISSING',
+      port: process.env.DB_PORT || 'MISSING',
+      user: process.env.DB_USER ? 'SET' : 'MISSING',
+      database: process.env.DB_NAME ? 'SET' : 'MISSING',
+      ssl: process.env.DB_SSL || 'false',
+    });
+    
+    // Add timeout for app creation to prevent hanging
+    const appCreationPromise = NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
       logger: ['error', 'warn', 'log'],
     });
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('App creation timeout after 30 seconds')), 30000);
+    });
+    
+    const app = await Promise.race([appCreationPromise, timeoutPromise]) as any;
     console.log('NestJS application created');
 
   // Trust proxy for accurate IP detection behind load balancers/proxies
@@ -190,7 +205,14 @@ async function createApp(): Promise<Express> {
 
     // Initialize the app (but don't call listen() - Vercel handles that)
     console.log('Initializing app...');
-    await app.init();
+    
+    // Add timeout for app initialization
+    const initPromise = app.init();
+    const initTimeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('App initialization timeout after 30 seconds')), 30000);
+    });
+    
+    await Promise.race([initPromise, initTimeoutPromise]);
     console.log('App initialized successfully');
     cachedApp = expressApp;
     return expressApp;

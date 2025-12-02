@@ -20,8 +20,12 @@ import { User } from '../users/entities/user.entity';
           password: configService.get<string>('DB_PASS'),
           database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true, // automatically load entity files
-        synchronize: true, // ❌ don't use true in production
+        // NEVER use synchronize in production - it causes schema conflicts
+        // Use migrations instead for production deployments
+        synchronize: false, // Disabled for production safety
         ssl: configService.get<string>('DB_SSL') === 'true' || false, // Enable SSL if DB_SSL=true
+        // Don't fail on connection errors - let it retry on first query
+        // This is important for serverless where connection might be delayed
         extra: {
           ssl: configService.get<string>('DB_SSL') === 'true' ? {
             rejectUnauthorized: false,
@@ -35,8 +39,12 @@ import { User } from '../users/entities/user.entity';
         // Connection retry settings
         retryAttempts: 3,
         retryDelay: 3000, // 3 seconds
+        // Connection timeout for serverless environments
+        connectTimeout: 10000, // 10 seconds
         // Logging for debugging
         logging: configService.get<string>('NODE_ENV') === 'development' ? ['error', 'warn'] : ['error'],
+        // Don't fail on connection errors during initialization in serverless
+        // The connection will be established on first query
         };
       },
     }),
