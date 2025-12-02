@@ -17,10 +17,16 @@ export class CreatePlanDto {
   @IsOptional()
   currency?: string;
 
-  @ApiProperty({ example: 'month', description: 'Billing period (month/year)', default: 'year' })
-  @IsString()
+  @ApiProperty({ example: 'month', description: 'Billing period unit (month/year)', enum: ['month', 'year'], default: 'month' })
+  @IsEnum(['month', 'year'])
   @IsOptional()
-  billingPeriod?: string;
+  billingPeriodUnit?: 'month' | 'year';
+
+  @ApiProperty({ example: 1, description: 'Billing period value (number of units)', default: 1 })
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  billingPeriodValue?: number;
 
   @ApiProperty({ example: ['Feature A', 'Feature B'], description: 'List of included features' })
   @IsArray()

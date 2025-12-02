@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -25,6 +26,10 @@ export class CreateTenantDto {
     message: 'Subdomain can only contain lowercase letters, numbers, and hyphens',
   })
   subdomain: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
 
   @ApiProperty({ example: 'uuid-of-plan', description: 'ID of the plan to assign to this tenant' })
   @IsUUID()

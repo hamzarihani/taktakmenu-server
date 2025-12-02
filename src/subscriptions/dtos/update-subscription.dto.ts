@@ -1,4 +1,4 @@
-import { IsOptional, IsDateString, IsBoolean, IsUUID } from 'class-validator';
+import { IsOptional, IsDateString, IsIn, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateSubscriptionDto {
@@ -7,10 +7,14 @@ export class UpdateSubscriptionDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiProperty({ example: true, required: false })
+  @ApiProperty({ 
+    example: 'active', 
+    enum: ['active', 'expired', 'canceled', 'pending', 'trialing', 'unpaid'],
+    required: false 
+  })
   @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
+  @IsIn(['active', 'expired', 'canceled', 'pending', 'trialing', 'unpaid'])
+  status?: string;
 
   @ApiProperty({ example: 'uuid-of-plan', required: false })
   @IsOptional()

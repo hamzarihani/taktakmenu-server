@@ -26,9 +26,6 @@ import { User } from 'src/users/entities/user.entity';
           } : undefined,
           // Connection pool settings to prevent ECONNRESET errors
           connectionLimit: 10,
-          acquireTimeout: 60000, // 60 seconds
-          timeout: 60000, // 60 seconds
-          reconnect: true,
           // Keep connection alive
           keepAliveInitialDelay: 0,
           enableKeepAlive: true,

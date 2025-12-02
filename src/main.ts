@@ -66,6 +66,7 @@ async function bootstrap() {
       // Specific origins (exact matches)
       const allowedOrigins = [
         'http://localhost:3000',
+        'http://localhost:5001',
         'https://taktakmenu.com',
         process.env.FRONTEND_URL,
       ].filter(Boolean);

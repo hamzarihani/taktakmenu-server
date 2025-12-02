@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Tenant } from 'src/tenant/entities/tenant.entity';
 import { Plan } from 'src/plan/entities/plan.entity';
 import { Expose } from 'class-transformer';
@@ -10,8 +10,7 @@ export class Subscription {
   id: string;
 
   @Expose()
-  @OneToOne(() => Tenant, (tenant) => tenant.subscription, { nullable: false, onDelete: 'CASCADE' })
-  @JoinColumn() // <--- this makes Subscription the owner and stores tenantId FK
+  @ManyToOne(() => Tenant, (tenant) => tenant.subscriptions, { nullable: false, onDelete: 'CASCADE' })
   tenant: Tenant;
 
   @Expose()
@@ -27,8 +26,12 @@ export class Subscription {
   endDate: Date;
 
   @Expose()
-  @Column({ default: true })
-  isActive: boolean;
+  @Column({
+    type: 'enum',
+    enum: ['active', 'expired', 'canceled', 'pending', 'trialing', 'unpaid'],
+    default: 'active'
+  })
+  status: string;
 
   @Expose()
   @CreateDateColumn()

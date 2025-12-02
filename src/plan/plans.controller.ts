@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -22,29 +22,38 @@ export class PlansController {
   constructor(private plansService: PlansService) {}
 
   @Get('public')
-  @ApiOperation({ summary: 'Get all plans (Public)', description: 'Returns all available plans. No authentication required.' })
+  @ApiOperation({ summary: 'Get all plans (Public)', description: 'Returns non-archived plans by default. Set isArchived=true to include archived plans. No authentication required.' })
+  @ApiQuery({ name: 'isArchived', required: false, type: Boolean, description: 'Set to true to include archived plans, omit to get only non-archived plans' })
   @ApiResponse({ status: 200, description: 'Plans fetched successfully', type: [Plan] })
-  async getPublicPlans(): Promise<Plan[]> {
-    return this.plansService.findPublicPlans();
+  async getPublicPlans(@Query('isArchived') isArchived?: string): Promise<Plan[]> {
+    // Convert string query param to boolean if provided
+    // true means include archived plans (all plans), false/undefined means only non-archived
+    const includeArchived = isArchived === 'true';
+    return this.plansService.findPublicPlans(includeArchived);
   }
 
   @Get()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get paginated list of plans', description: 'Returns plans with pagination, sorting, and optional search.' })
+  @ApiOperation({ summary: 'Get paginated list of plans', description: 'Returns non-archived plans by default. Set isArchived=true to include archived plans. Supports pagination, sorting, and optional search.' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Number of items per page', example: 10 })
   @ApiQuery({ name: 'sortBy', required: true, type: String, description: 'Field to sort by', example: 'createdAt' })
   @ApiQuery({ name: 'sortOrder', required: true, type: String, enum: ['ASC', 'DESC'], description: 'Sort order', example: 'DESC' })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Search string to filter results across tenant fields' })
+  @ApiQuery({ name: 'isArchived', required: false, type: Boolean, description: 'Set to true to include archived plans, omit to get only non-archived plans' })
   @ApiResponse(FetchResponse)
   async getAllPlans(
     @Query() paginationDto: PaginationDto,
+    @Query('isArchived') isArchived?: string,
   ): Promise<PaginationResult<Plan>> {
     if (!paginationDto.page || !paginationDto.limit) {
       throw new BadRequestException('page and limit are required');
     }
 
-    return this.plansService.findPlans(paginationDto);
+    // Convert string query param to boolean if provided
+    // true means include archived plans (all plans), false/undefined means only non-archived
+    const includeArchived = isArchived === 'true';
+    return this.plansService.findPlans(paginationDto, includeArchived);
   }
 
   // 🔹 POST: Create new plan
@@ -71,6 +80,16 @@ export class PlansController {
   @ApiBody({ type: UpdatePlanDto })
   async updatePlan(@Param('id') id: string, @Body() dto: UpdatePlanDto): Promise<Plan> {
     return this.plansService.updatePlan(id, dto);
+  }
+
+  // 🔹 PATCH: Archive a plan
+  @Patch(':id/archive')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Archive a plan by ID' })
+  @ApiParam({ name: 'id', required: true, example: 'uuid-of-plan' })
+  @ApiResponse({ status: 200, description: 'Plan archived successfully', type: Plan })
+  async archivePlan(@Param('id') id: string): Promise<Plan> {
+    return this.plansService.archivePlan(id);
   }
 
   // 🔹 DELETE: Remove a plan

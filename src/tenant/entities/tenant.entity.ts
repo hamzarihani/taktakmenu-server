@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, OneToMany, ManyToOne, OneToOne } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, OneToMany, ManyToOne } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Expose } from 'class-transformer';
 import { Plan } from 'src/plan/entities/plan.entity';
@@ -54,8 +54,8 @@ export class Tenant {
   @OneToMany(() => User, (user) => user.tenant, { cascade: true, onDelete: 'CASCADE' })
   users: User[];
 
-  @OneToOne(() => Subscription, (subscription) => subscription.tenant)
-  subscription: Subscription;
+  @OneToMany(() => Subscription, (subscription) => subscription.tenant)
+  subscriptions: Subscription[];
   
   @Expose()
   @ManyToOne(() => User, { nullable: true })

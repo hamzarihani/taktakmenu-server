@@ -22,8 +22,12 @@ export class Plan {
   currency: string;
 
   @Expose()
-  @Column({ default: 'month' })
-  billingPeriod: string;
+  @Column({ type: 'enum', enum: ['month', 'year'], default: 'month' })
+  billingPeriodUnit: 'month' | 'year';
+
+  @Expose()
+  @Column({ type: 'int', default: 1 })
+  billingPeriodValue: number;
 
   @Expose()
   @Column('simple-array')
@@ -32,6 +36,10 @@ export class Plan {
   @Expose()
   @Column({ default: false })
   isPopular: boolean;
+
+  @Expose()
+  @Column({ default: false })
+  isArchived: boolean;
 
   @Expose()
   @OneToMany(() => Subscription, (subscription) => subscription.plan)

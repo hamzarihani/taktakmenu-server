@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +13,19 @@ import { Plan } from 'src/plan/entities/plan.entity';
 import { Subscription } from './entities/subscription.entity';
 import { UpdateSubscriptionDto } from './dtos/update-subscription.dto';
 
+/**
+ * Helper function to calculate end date based on billing period unit and value
+ */
+function calculateEndDate(unit: 'month' | 'year', value: number): Date {
+  const now = new Date();
+  if (unit === 'month') {
+    now.setMonth(now.getMonth() + value);
+  } else if (unit === 'year') {
+    now.setFullYear(now.getFullYear() + value);
+  }
+  return now;
+}
+
 @Injectable()
 export class SubscriptionsService {
   constructor(
@@ -19,30 +33,30 @@ export class SubscriptionsService {
     private subscriptionRepo: Repository<Subscription>,
     @InjectRepository(Plan)
     private plansRepository: Repository<Plan>,
+    @InjectRepository(Tenant)
+    private tenantRepository: Repository<Tenant>,
   ) {}
 
   async createSubscription(tenant: Tenant, plan: Plan): Promise<Subscription> {
     try {
-      const startDate = new Date();
-      const endDate = new Date(startDate);
+      // Deactivate all existing active subscriptions for this tenant
+      await this.subscriptionRepo
+        .createQueryBuilder()
+        .update(Subscription)
+        .set({ status: 'expired' })
+        .where('tenantId = :tenantId', { tenantId: tenant.id })
+        .andWhere('status = :status', { status: 'active' })
+        .execute();
 
-      switch (plan.billingPeriod) {
-        case 'month':
-          endDate.setMonth(endDate.getMonth() + 1);
-          break;
-        case 'year':
-          endDate.setFullYear(endDate.getFullYear() + 1);
-          break;
-        default:
-          endDate.setMonth(endDate.getMonth() + 1);
-      }
+      const startDate = new Date();
+      const endDate = calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue);
 
       const subscription = this.subscriptionRepo.create({
         tenant,
         plan,
         startDate,
         endDate: endDate,
-        isActive: true,
+        status: 'active',
       });
 
       return await this.subscriptionRepo.save(subscription);
@@ -54,7 +68,7 @@ export class SubscriptionsService {
   async updateSubscription(id: string, dto: UpdateSubscriptionDto) {
     const subscription = await this.subscriptionRepo.findOne({
       where: { id },
-      relations: ['plan'],
+      relations: ['plan', 'tenant'],
     });
     if (!subscription) throw new BadRequestException('Subscription not found');
 
@@ -67,7 +81,21 @@ export class SubscriptionsService {
     }
 
     if (dto.endDate) subscription.endDate = new Date(dto.endDate);
-    if (typeof dto.isActive === 'boolean') subscription.isActive = dto.isActive;
+    
+    // If activating this subscription, deactivate all other active subscriptions for this tenant
+    if (dto.status === 'active') {
+      await this.subscriptionRepo
+        .createQueryBuilder()
+        .update(Subscription)
+        .set({ status: 'expired' })
+        .where('tenantId = :tenantId', { tenantId: subscription.tenant.id })
+        .andWhere('id != :id', { id })
+        .andWhere('status = :status', { status: 'active' })
+        .execute();
+      subscription.status = 'active';
+    } else if (dto.status) {
+      subscription.status = dto.status;
+    }
 
     return this.subscriptionRepo.save(subscription);
   }
@@ -76,7 +104,59 @@ export class SubscriptionsService {
     const subscription = await this.subscriptionRepo.findOne({ where: { id } });
     if (!subscription) throw new BadRequestException('Subscription not found');
 
-    subscription.isActive = false;
+    subscription.status = 'canceled';
     return this.subscriptionRepo.save(subscription);
+  }
+
+  /**
+   * Get the active subscription for a tenant
+   */
+  async getActiveSubscription(tenantId: string): Promise<Subscription | null> {
+    const subscription = await this.subscriptionRepo.findOne({
+      where: { tenant: { id: tenantId }, status: 'active' },
+      relations: ['plan', 'tenant'],
+    });
+    return subscription || null;
+  }
+
+  /**
+   * Change subscription (upgrade/downgrade) for a tenant
+   * Deactivates current active subscription and creates a new one
+   */
+  async changeSubscription(tenantId: string, newPlanId: string): Promise<Subscription> {
+    // Validate tenant exists
+    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
+    }
+
+    // Validate plan exists
+    const plan = await this.plansRepository.findOne({ where: { id: newPlanId } });
+    if (!plan) {
+      throw new NotFoundException(`Plan with ID ${newPlanId} not found`);
+    }
+
+    // Fetch current active subscription
+    const currentSubscription = await this.getActiveSubscription(tenantId);
+
+    // If exists, expire it and set endDate to now
+    if (currentSubscription) {
+      currentSubscription.status = 'expired';
+      currentSubscription.endDate = new Date();
+      await this.subscriptionRepo.save(currentSubscription);
+    }
+
+    // Create new subscription instance
+    const now = new Date();
+    const newSubscription = this.subscriptionRepo.create({
+      tenant,
+      plan,
+      startDate: now,
+      endDate: calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue),
+      status: 'active',
+    });
+
+    // Save and return the new subscription
+    return await this.subscriptionRepo.save(newSubscription);
   }
 }

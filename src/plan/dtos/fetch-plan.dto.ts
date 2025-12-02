@@ -15,7 +15,10 @@ export class FetchPlanDto {
   currency: string;
 
   @Expose()
-  billingPeriod: string;
+  billingPeriodUnit: 'month' | 'year';
+
+  @Expose()
+  billingPeriodValue: number;
 
   @Expose()
   features: string[];

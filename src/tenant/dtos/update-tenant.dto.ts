@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsBoolean, IsEmail } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateTenantDto {
   @ApiProperty({ example: 'Restaurant Name', description: 'Tenant name', required: false })
@@ -39,6 +40,7 @@ export class UpdateTenantDto {
 
   @ApiProperty({ example: true, description: 'Show info to clients', required: false })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   showInfoToClients?: boolean;
 

@@ -8,9 +8,11 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
@@ -20,14 +22,16 @@ import { PaginationResult } from 'src/common/interfaces';
 import { FetchResponse } from 'src/common/swaggerResponse/tenant-response';
 import { CreateTenantDto } from './dtos/create-tenant.dto';
 import { UpdateTenantDto } from './dtos/update-tenant.dto';
+import { UpdateTenantAdminDto } from './dtos/update-tenant-admin.dto';
 import { GetUser } from 'src/common/get-user-decorator';
 import type { JwtUser } from 'src/common/interfaces';
-import { FetchTenantDto } from './dtos/fetch-tenant.dto';
+import { FetchTenantDto, FetchTenantOptimizedDto } from './dtos/fetch-tenant.dto';
 import { GetSubdomain } from 'src/common/get-subdomain-decorator';
 import { PublicTenantProfileDto } from './dtos/public-tenant-profile.dto';
 import { plainToInstance } from 'class-transformer';
 import { UsersService } from 'src/users/users.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { UserRole } from 'src/users/entities/user.entity';
 
 @ApiTags('Tenants Controller')
 @Controller('tenants')
@@ -95,7 +99,7 @@ export class TenantsController {
   @ApiResponse(FetchResponse)
   async getAllTenants(
     @Query() paginationDto: PaginationDto,
-  ): Promise<PaginationResult<Tenant>> {
+  ): Promise<PaginationResult<FetchTenantOptimizedDto>> {
     if (!paginationDto.page || !paginationDto.limit) {
       throw new BadRequestException('page and limit are required');
     }
@@ -111,22 +115,62 @@ export class TenantsController {
 
   @Post()
   @ApiBearerAuth('access-token')
-  async createTenant(@Body() dto: CreateTenantDto, @GetUser() user: JwtUser): Promise<Tenant> {
+  @ApiOperation({ summary: 'Create a new tenant (Super Admin only)' })
+  @ApiResponse({ status: 201, description: 'Tenant created successfully', type: FetchTenantOptimizedDto })
+  async createTenant(@Body() dto: CreateTenantDto, @GetUser() user: JwtUser): Promise<FetchTenantOptimizedDto> {
     return this.tenantsService.createTenant(dto, user);
   }
 
-  @Put(':id')
+  @Put('profile')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update tenant profile (Super Admin only)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo'))
-  @ApiResponse({ status: 200, description: 'Tenant updated successfully', type: FetchTenantDto })
-  async updateTenant(
-    @Param('id') id: string,
+  @ApiResponse({ status: 200, description: 'Tenant profile updated successfully', type: FetchTenantDto })
+  async updateTenantProfile(
+    @Req() req: Request,
     @Body() dto: UpdateTenantDto,
     @UploadedFile() logoFile: Express.Multer.File,
     @GetUser() user: JwtUser,
   ): Promise<FetchTenantDto> {
+    // Access raw body to get the actual string value before ValidationPipe conversion
+    // The enableImplicitConversion might convert "false" string to true boolean
+    const rawBody = req.body as any;
+    
+    // Get the raw value from the request body (before ValidationPipe transformation)
+    if (rawBody && 'showInfoToClients' in rawBody) {
+      const rawValue = rawBody.showInfoToClients;
+      
+      // Convert string "false" to boolean false
+      if (typeof rawValue === 'string') {
+        const lowerValue = rawValue.toLowerCase().trim();
+        dto.showInfoToClients = lowerValue === 'true' || lowerValue === '1';
+      } else if (typeof rawValue === 'boolean') {
+        dto.showInfoToClients = rawValue;
+      } else if (rawValue !== undefined && rawValue !== null) {
+        // Fallback for other types
+        dto.showInfoToClients = rawValue === true || rawValue === 1 || rawValue === '1' || rawValue === 'true';
+      }
+    }
+    return this.tenantsService.updateTenantProfile(dto, user, logoFile);
+  }
+
+  @Put(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update tenant by ID (System Admin only)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('logo'))
+  @ApiResponse({ status: 200, description: 'Tenant updated successfully', type: FetchTenantOptimizedDto })
+  async updateTenant(
+    @Param('id') id: string,
+    @Body() dto: UpdateTenantAdminDto,
+    @UploadedFile() logoFile: Express.Multer.File,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchTenantOptimizedDto> {
+    // Only SYS_ADMIN can update tenants
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new ForbiddenException('Only system admins can update tenants');
+    }
     return this.tenantsService.updateTenant(id, dto, user, logoFile);
   }
 
@@ -147,3 +191,4 @@ export class TenantsController {
     return this.tenantsService.findBySubdomain(subdomain);
   }
 }
+

@@ -25,6 +25,7 @@ export class PlansService {
 
   async findPlans(
     paginationDto: PaginationDto,
+    includeArchived?: boolean,
   ): Promise<PaginationResult<Plan>> {
     const { page, limit, sortBy, sortOrder, search } = paginationDto;
     const offset = (page - 1) * limit;
@@ -39,6 +40,12 @@ export class PlansService {
       }
 
       const query = this.plansRepository.createQueryBuilder('plan');
+
+      // By default, only return non-archived plans
+      // If includeArchived is true, return all plans (no filter)
+      if (!includeArchived) {
+        query.andWhere('plan.isArchived = :isArchived', { isArchived: false });
+      }
 
       if (search) {
         const searchConditions = columns
@@ -126,12 +133,28 @@ export class PlansService {
     return { message: 'Plan deleted successfully' };
   }
 
-  async findPublicPlans(): Promise<Plan[]> {
-    const plans = await this.plansRepository.find({
-      order: { price: 'ASC' },
-    });
+  async findPublicPlans(includeArchived?: boolean): Promise<Plan[]> {
+    const queryBuilder = this.plansRepository.createQueryBuilder('plan');
+
+    // By default, only return non-archived plans
+    // If includeArchived is true, return all plans (no filter)
+    if (!includeArchived) {
+      queryBuilder.where('plan.isArchived = :isArchived', { isArchived: false });
+    }
+
+    queryBuilder.orderBy('plan.price', 'ASC');
+
+    const plans = await queryBuilder.getMany();
     return plainToInstance(Plan, plans, {
       excludeExtraneousValues: true,
     });
+  }
+
+  async archivePlan(planId: string): Promise<Plan> {
+    const plan = await this.plansRepository.findOne({ where: { id: planId } });
+    if (!plan) throw new BadRequestException('Plan not found');
+
+    plan.isArchived = true;
+    return await this.plansRepository.save(plan);
   }
 }
