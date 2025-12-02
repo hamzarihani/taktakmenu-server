@@ -15,7 +15,7 @@ export default new DataSource({
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'saas_db',
   entities: [User, Tenant, Plan, Subscription, MenuCategory, MenuItem, Image],
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: ['dist/database/migrations/*.ts'], // src/database/migrations/*.ts
   synchronize: false,
   charset: 'utf8mb4_unicode_ci',
 });

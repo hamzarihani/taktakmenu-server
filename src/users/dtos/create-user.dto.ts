@@ -9,7 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
-import { Tenant } from 'src/tenant/entities/tenant.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 export class CreateUserDto {
   @IsEmail()

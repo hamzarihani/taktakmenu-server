@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { FetchUsersDto } from 'src/users/dtos/fetch-users.dto';
+import { FetchUsersDto } from '../../users/dtos/fetch-users.dto';
 
 class ImageDto {
   @ApiProperty()

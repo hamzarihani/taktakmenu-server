@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Tenant } from 'src/tenant/entities/tenant.entity';
-import { Plan } from 'src/plan/entities/plan.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
+import { Plan } from '../../plan/entities/plan.entity';
 import { Expose } from 'class-transformer';
 
 @Entity()

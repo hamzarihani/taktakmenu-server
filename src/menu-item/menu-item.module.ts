@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MenuItemController } from './menu-item.controller';
 import { MenuItemService } from './menu-item.service';
 import { MenuItem } from './entities/menu-item.entity';
-import { FileModule } from 'src/file/file.module';
-import { UsersModule } from 'src/users/users.module';
-import { MenuCategoryModule } from 'src/menu-category/menu-category.module';
-import { TenantsModule } from 'src/tenant/tenants.module';
+import { FileModule } from '../file/file.module';
+import { UsersModule } from '../users/users.module';
+import { MenuCategoryModule } from '../menu-category/menu-category.module';
+import { TenantsModule } from '../tenant/tenants.module';
 
 @Module({
   imports: [

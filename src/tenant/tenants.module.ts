@@ -3,11 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tenant } from './entities/tenant.entity';
 import { TenantsService } from './tenants.service';
 import { TenantsController } from './tenants.controller';
-import { UsersModule } from 'src/users/users.module';
-import { SubscriptionsModule } from 'src/subscriptions/subscriptions.module';
-import { PlansModule } from 'src/plan/plans.module';
-import { FileModule } from 'src/file/file.module';
-import { Subscription } from 'src/subscriptions/entities/subscription.entity';
+import { UsersModule } from '../users/users.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { PlansModule } from '../plan/plans.module';
+import { FileModule } from '../file/file.module';
+import { Subscription } from '../subscriptions/entities/subscription.entity';
 
 @Module({
   imports: [

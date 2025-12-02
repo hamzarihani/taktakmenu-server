@@ -10,7 +10,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { User, UserRole } from '../entities/user.entity';
-import { Tenant } from 'src/tenant/entities/tenant.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 import type { DeepPartial } from 'typeorm';
 
 export class CreateTenantSuperAdminDto {

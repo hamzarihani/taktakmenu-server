@@ -17,16 +17,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MenuItemService } from './menu-item.service';
 import { MenuItem } from './entities/menu-item.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
 import { CreateMenuItemDto } from './dtos/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dtos/update-menu-item.dto';
-import { GetUser } from 'src/common/get-user-decorator';
-import type { JwtUser } from 'src/common/interfaces';
-import { UsersService } from 'src/users/users.service';
+import { GetUser } from '../common/get-user-decorator';
+import type { JwtUser } from '../common/interfaces';
+import { UsersService } from '../users/users.service';
 import { FetchMenuItemDto } from './dtos/fetch-menu-item.dto';
-import { GetSubdomain } from 'src/common/get-subdomain-decorator';
-import { TenantsService } from 'src/tenant/tenants.service';
+import { GetSubdomain } from '../common/get-subdomain-decorator';
+import { TenantsService } from '../tenant/tenants.service';
 
 @ApiTags('Menu Item Controller')
 @Controller('menu-items')

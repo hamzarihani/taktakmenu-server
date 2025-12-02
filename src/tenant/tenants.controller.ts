@@ -17,21 +17,21 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
 import { Tenant } from './entities/tenant.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
-import { FetchResponse } from 'src/common/swaggerResponse/tenant-response';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
+import { FetchResponse } from '../common/swaggerResponse/tenant-response';
 import { CreateTenantDto } from './dtos/create-tenant.dto';
 import { UpdateTenantDto } from './dtos/update-tenant.dto';
 import { UpdateTenantAdminDto } from './dtos/update-tenant-admin.dto';
-import { GetUser } from 'src/common/get-user-decorator';
-import type { JwtUser } from 'src/common/interfaces';
+import { GetUser } from '../common/get-user-decorator';
+import type { JwtUser } from '../common/interfaces';
 import { FetchTenantDto, FetchTenantOptimizedDto } from './dtos/fetch-tenant.dto';
-import { GetSubdomain } from 'src/common/get-subdomain-decorator';
+import { GetSubdomain } from '../common/get-subdomain-decorator';
 import { PublicTenantProfileDto } from './dtos/public-tenant-profile.dto';
 import { plainToInstance } from 'class-transformer';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { UserRole } from 'src/users/entities/user.entity';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Tenants Controller')
 @Controller('tenants')

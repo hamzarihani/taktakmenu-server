@@ -9,8 +9,8 @@ import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Plan } from './entities/plan.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
 import { CreatePlanDto } from './dtos/create-plan.dto';
 import { UpdatePlanDto } from './dtos/update-plan.dto';
 

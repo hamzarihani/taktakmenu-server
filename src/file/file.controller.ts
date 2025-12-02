@@ -19,9 +19,9 @@ import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTag
 import type { Response } from 'express';
 import { FileService } from './file.service';
 import { Image } from './entities/image.entity';
-import { GetUser } from 'src/common/get-user-decorator';
-import type { JwtUser } from 'src/common/interfaces';
-import { UsersService } from 'src/users/users.service';
+import { GetUser } from '../common/get-user-decorator';
+import type { JwtUser } from '../common/interfaces';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('File Controller')
 @ApiBearerAuth('access-token')

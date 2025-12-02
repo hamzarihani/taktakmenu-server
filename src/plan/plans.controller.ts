@@ -8,10 +8,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { PaginationDto } from '../common/dtos/pagination.dto';
 import { PlansService } from './plans.service';
-import { FetchResponse } from 'src/common/swaggerResponse/tenant-response';
-import { PaginationResult } from 'src/common/interfaces';
+import { FetchResponse } from '../common/swaggerResponse/tenant-response';
+import { PaginationResult } from '../common/interfaces';
 import { Plan } from './entities/plan.entity';
 import { UpdatePlanDto } from './dtos/update-plan.dto';
 import { CreatePlanDto } from './dtos/create-plan.dto';

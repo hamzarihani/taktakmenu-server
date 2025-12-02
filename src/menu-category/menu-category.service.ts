@@ -9,10 +9,10 @@ import { Repository } from 'typeorm';
 import { MenuCategory } from './entities/menu-category.entity';
 import { CreateMenuCategoryDto } from './dtos/create-menu-category.dto';
 import { UpdateMenuCategoryDto } from './dtos/update-menu-category.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
-import { FileService } from 'src/file/file.service';
-import { Image } from 'src/file/entities/image.entity';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
+import { FileService } from '../file/file.service';
+import { Image } from '../file/entities/image.entity';
 import { plainToInstance } from 'class-transformer';
 import { FetchMenuCategoryDto } from './dtos/fetch-menu-category.dto';
 

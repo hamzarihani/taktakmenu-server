@@ -8,8 +8,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Tenant } from 'src/tenant/entities/tenant.entity';
-import { Plan } from 'src/plan/entities/plan.entity';
+import { Tenant } from '../tenant/entities/tenant.entity';
+import { Plan } from '../plan/entities/plan.entity';
 import { Subscription } from './entities/subscription.entity';
 import { UpdateSubscriptionDto } from './dtos/update-subscription.dto';
 

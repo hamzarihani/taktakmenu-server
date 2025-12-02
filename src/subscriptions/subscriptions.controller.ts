@@ -1,4 +1,4 @@
-import { Controller, Patch, Param, Body, BadRequestException, Post, Get, NotFoundException } from '@nestjs/common';
+import { Controller, Patch, Param, Body, Post, Get, NotFoundException } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { UpdateSubscriptionDto } from './dtos/update-subscription.dto';

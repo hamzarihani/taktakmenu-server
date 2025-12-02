@@ -1,8 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
-  forwardRef,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -19,10 +17,10 @@ import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { FetchUsersDto } from './dtos/fetch-users.dto';
 import { plainToInstance } from 'class-transformer';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
 import { CreateTenantSuperAdminDto } from './dtos/create-super-admin.dto';
-import { JwtUser } from 'src/common/interfaces';
+import { JwtUser } from '../common/interfaces';
 
 @Injectable()
 export class UsersService {

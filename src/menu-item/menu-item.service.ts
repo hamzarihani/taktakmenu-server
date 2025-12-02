@@ -11,13 +11,13 @@ import { Repository } from 'typeorm';
 import { MenuItem } from './entities/menu-item.entity';
 import { CreateMenuItemDto } from './dtos/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dtos/update-menu-item.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { PaginationResult } from 'src/common/interfaces';
-import { FileService } from 'src/file/file.service';
-import { Image } from 'src/file/entities/image.entity';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { PaginationResult } from '../common/interfaces';
+import { FileService } from '../file/file.service';
+import { Image } from '../file/entities/image.entity';
 import { plainToInstance } from 'class-transformer';
-import { MenuCategoryService } from 'src/menu-category/menu-category.service';
-import { MenuCategory } from 'src/menu-category/entities/menu-category.entity';
+import { MenuCategoryService } from '../menu-category/menu-category.service';
+import { MenuCategory } from '../menu-category/entities/menu-category.entity';
 import { FetchMenuItemDto } from './dtos/fetch-menu-item.dto';
 
 @Injectable()

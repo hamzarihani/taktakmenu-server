@@ -15,12 +15,12 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { PaginationDto } from '../common/dtos/pagination.dto';
 import { FetchUsersDto } from './dtos/fetch-users.dto';
-import { PaginationResult } from 'src/common/interfaces';
-import { TenantsService } from 'src/tenant/tenants.service';
-import { GetUser } from 'src/common/get-user-decorator';
-import type { JwtUser } from 'src/common/interfaces';
+import { PaginationResult } from '../common/interfaces';
+import { TenantsService } from '../tenant/tenants.service';
+import { GetUser } from '../common/get-user-decorator';
+import type { JwtUser } from '../common/interfaces';
 import { UserRole } from './entities/user.entity';
 import { ForbiddenException } from '@nestjs/common';
 
