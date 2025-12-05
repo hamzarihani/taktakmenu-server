@@ -23,25 +23,43 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: {
-          host: config.get<string>('SMTP_HOST'),
-          port: parseInt(config.get<string>('SMTP_PORT') || '587', 10),
-          secure: false,
-          auth: {
-            user: config.get<string>('SMTP_USER'),
-            pass: config.get<string>('SMTP_PASS'),
+      useFactory: (config: ConfigService) => {
+        const port = parseInt(config.get<string>('SMTP_PORT') || '587', 10);
+        const isSecurePort = port === 465; // Port 465 requires SSL/TLS
+        const smtpUser = config.get<string>('SMTP_USER') || 'no-reply@taktakmenu.com';
+        
+        return {
+          transport: {
+            host: config.get<string>('SMTP_HOST'),
+            port: port,
+            secure: isSecurePort, // true for 465 (SSL/TLS), false for 587 (STARTTLS)
+            auth: {
+              user: smtpUser,
+              pass: config.get<string>('SMTP_PASS'),
+            },
+            connectionTimeout: 30000, // 30 seconds (increased for slower connections)
+            greetingTimeout: 30000, // 30 seconds
+            socketTimeout: 30000, // 30 seconds
+            requireTLS: !isSecurePort, // Require TLS for port 587 (STARTTLS)
+            tls: {
+              rejectUnauthorized: false, // Set to true in production with valid certificates
+            },
+            // Additional options for better compatibility
+            pool: false, // Disable connection pooling for better reliability
+            maxConnections: 1,
+            maxMessages: 1,
           },
-        },
-        defaults: {
-          from: '"Academix Platform" <no-reply@academix.com>',
-        },
-        template: {
-          dir: join(__dirname, 'templates'),
-          adapter: new HandlebarsAdapter(),
-          options: { strict: true },
-        },
-      }),
+          defaults: {
+            // Use SMTP_USER as the sender address (required by most SMTP servers)
+            from: `"TaktakMenu Platform" <${smtpUser}>`,
+          },
+          template: {
+            dir: join(__dirname, 'templates'),
+            adapter: new HandlebarsAdapter(),
+            options: { strict: true },
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

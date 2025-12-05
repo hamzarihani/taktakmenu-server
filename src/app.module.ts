@@ -23,6 +23,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { FileModule } from './file/file.module';
 import { MenuCategoryModule } from './menu-category/menu-category.module';
 import { MenuItemModule } from './menu-item/menu-item.module';
+import { ContactModule } from './contact/contact.module';
 
 // Middleware
 import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
@@ -71,6 +72,9 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 
     // File management
     FileModule,
+
+    // Contact
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [AppService, RateLimitMiddleware, SubdomainMiddleware, SecurityMiddleware],
@@ -131,6 +135,7 @@ export class AppModule implements NestModule {
       { path: 'tenants/public/profile', method: RequestMethod.GET },
       { path: 'plans/public', method: RequestMethod.GET },
       { path: 'files/public/:id/serve', method: RequestMethod.GET },
+      { path: 'contact', method: RequestMethod.POST },
     ];
   }
 }
