@@ -25,7 +25,7 @@ export class PlansService {
 
   async findPlans(
     paginationDto: PaginationDto,
-    includeArchived?: boolean,
+    isArchived?: boolean,
   ): Promise<PaginationResult<Plan>> {
     const { page, limit, sortBy, sortOrder, search } = paginationDto;
     const offset = (page - 1) * limit;
@@ -41,10 +41,12 @@ export class PlansService {
 
       const query = this.plansRepository.createQueryBuilder('plan');
 
-      // By default, only return non-archived plans
-      // If includeArchived is true, return all plans (no filter)
-      if (!includeArchived) {
-        query.andWhere('plan.isArchived = :isArchived', { isArchived: false });
+      // If isArchived is provided, filter based on its value:
+      // - isArchived = false → only active (non-archived) plans
+      // - isArchived = true → only archived plans
+      // If isArchived is undefined, show all plans (no filter)
+      if (isArchived !== undefined) {
+        query.andWhere('plan.isArchived = :isArchived', { isArchived });
       }
 
       if (search) {
@@ -150,11 +152,50 @@ export class PlansService {
     });
   }
 
-  async archivePlan(planId: string): Promise<Plan> {
+  async toggleArchivePlan(planId: string): Promise<Plan> {
     const plan = await this.plansRepository.findOne({ where: { id: planId } });
     if (!plan) throw new BadRequestException('Plan not found');
 
-    plan.isArchived = true;
+    // Toggle archived status
+    plan.isArchived = !plan.isArchived;
     return await this.plansRepository.save(plan);
+  }
+
+  async getPlansStatistics(): Promise<{
+    totalPlans: number;
+    averagePrice: number;
+    popularPlanName: string | null;
+  }> {
+    try {
+      // Get total count of non-archived plans
+      const totalPlans = await this.plansRepository.count({
+        where: { isArchived: false },
+      });
+
+      // Calculate average price of non-archived plans
+      const result = await this.plansRepository
+        .createQueryBuilder('plan')
+        .select('AVG(plan.price)', 'averagePrice')
+        .where('plan.isArchived = :isArchived', { isArchived: false })
+        .getRawOne();
+
+      const averagePrice = result?.averagePrice
+        ? parseFloat(result.averagePrice)
+        : 0;
+
+      // Get popular plan name
+      const popularPlan = await this.plansRepository.findOne({
+        where: { isPopular: true, isArchived: false },
+        select: ['name'],
+      });
+
+      return {
+        totalPlans,
+        averagePrice: Math.round(averagePrice * 100) / 100, // Round to 2 decimal places
+        popularPlanName: popularPlan?.name || null,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch plans statistics');
+    }
   }
 }

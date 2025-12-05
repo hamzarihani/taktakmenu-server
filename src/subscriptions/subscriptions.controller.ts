@@ -39,6 +39,14 @@ export class SubscriptionsController {
     return this.subscriptionsService.changeSubscription(dto.tenantId, dto.planId);
   }
 
+  @Get('tenant/:tenantId')
+  @ApiOperation({ summary: 'Get all subscriptions for a tenant' })
+  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'uuid-of-tenant' })
+  @ApiResponse({ status: 200, description: 'List of subscriptions for the tenant', type: [Subscription] })
+  async getAllSubscriptionsByTenant(@Param('tenantId') tenantId: string): Promise<Subscription[]> {
+    return this.subscriptionsService.getAllSubscriptionsByTenant(tenantId);
+  }
+
   @Get('active/:tenantId')
   @ApiOperation({ summary: 'Get active subscription for a tenant' })
   @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'uuid-of-tenant' })

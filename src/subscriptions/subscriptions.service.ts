@@ -109,6 +109,18 @@ export class SubscriptionsService {
   }
 
   /**
+   * Get all subscriptions for a tenant
+   */
+  async getAllSubscriptionsByTenant(tenantId: string): Promise<Subscription[]> {
+    const subscriptions = await this.subscriptionRepo.find({
+      where: { tenant: { id: tenantId } },
+      relations: ['plan', 'tenant'],
+      order: { createdAt: 'DESC' }, // Most recent first
+    });
+    return subscriptions;
+  }
+
+  /**
    * Get the active subscription for a tenant
    */
   async getActiveSubscription(tenantId: string): Promise<Subscription | null> {

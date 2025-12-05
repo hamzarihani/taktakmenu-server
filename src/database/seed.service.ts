@@ -13,10 +13,6 @@ export class SeedService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     // Skip seeding in production/serverless environments to avoid blocking initialization
-    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-      console.log('Skipping seed in production/serverless environment');
-      return;
-    }
 
     try {
       const usersCount = await this.userRepository.count();
