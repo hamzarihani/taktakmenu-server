@@ -3,8 +3,11 @@ import {
   BadRequestException,
   InternalServerErrorException,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { TenantsService } from '../tenant/tenants.service';
 import * as bcrypt from 'bcrypt';
 import { SignupDto } from './dtos/signup.dto';
 import { UserRole } from '../users/entities/user.entity';
@@ -17,6 +20,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => TenantsService))
+    private readonly tenantsService: TenantsService,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
@@ -57,7 +62,7 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, subdomain: string) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
@@ -71,6 +76,15 @@ export class AuthService {
     // Block sys admin from regular login
     if (user.role === UserRole.SYS_ADMIN) {
       throw new UnauthorizedException('Sys admins must use the sys admin login endpoint');
+    }
+
+    if (!user.tenant) {
+      throw new UnauthorizedException('Admin/Manager account must be associated with a tenant');
+    }
+
+    // Check if the subdomain matches (tenant is already loaded via findByEmail)
+    if (user.tenant.subdomain.toLowerCase() !== subdomain.toLowerCase()) {
+      throw new UnauthorizedException('You cannot login to a different restaurant. Please use your restaurant\'s subdomain.');
     }
     
     return this.generateTokens(user);

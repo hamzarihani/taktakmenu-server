@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
+import { TenantsModule } from '../tenant/tenants.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MailerModule } from '@nestjs-modules/mailer';
@@ -11,6 +12,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 @Module({
   imports: [
     UsersModule,
+    forwardRef(() => TenantsModule),
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -29,14 +31,14 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
         const smtpUser = config.get<string>('SMTP_USER') || 'no-reply@taktakmenu.com';
         
         return {
-          transport: {
-            host: config.get<string>('SMTP_HOST'),
+        transport: {
+          host: config.get<string>('SMTP_HOST'),
             port: port,
             secure: isSecurePort, // true for 465 (SSL/TLS), false for 587 (STARTTLS)
-            auth: {
+          auth: {
               user: smtpUser,
-              pass: config.get<string>('SMTP_PASS'),
-            },
+            pass: config.get<string>('SMTP_PASS'),
+          },
             connectionTimeout: 30000, // 30 seconds (increased for slower connections)
             greetingTimeout: 30000, // 30 seconds
             socketTimeout: 30000, // 30 seconds
@@ -48,16 +50,16 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
             pool: false, // Disable connection pooling for better reliability
             maxConnections: 1,
             maxMessages: 1,
-          },
-          defaults: {
+        },
+        defaults: {
             // Use SMTP_USER as the sender address (required by most SMTP servers)
             from: `"TaktakMenu Platform" <${smtpUser}>`,
-          },
-          template: {
-            dir: join(__dirname, 'templates'),
-            adapter: new HandlebarsAdapter(),
-            options: { strict: true },
-          },
+        },
+        template: {
+          dir: join(__dirname, 'templates'),
+          adapter: new HandlebarsAdapter(),
+          options: { strict: true },
+        },
         };
       },
     }),

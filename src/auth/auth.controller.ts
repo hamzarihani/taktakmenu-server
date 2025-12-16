@@ -14,6 +14,7 @@ import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { ResendOtpDto } from './dtos/resend-otp.dto';
 import { ApiBody, ApiHeader, ApiTags } from '@nestjs/swagger';
+import { GetSubdomain } from '../common/get-subdomain-decorator';
 
 @ApiTags('Auth Controller')
 @Controller('auth')
@@ -50,8 +51,11 @@ export class AuthController {
   })
   @Post('login')
   @HttpCode(200)
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(
+    @Body() dto: LoginDto,
+    @GetSubdomain() subdomain: string,
+  ) {
+    return this.authService.login(dto, subdomain);
   }
 
   @ApiBody({

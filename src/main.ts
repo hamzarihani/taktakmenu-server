@@ -142,15 +142,15 @@ async function bootstrap() {
     )
     .build();
 
-  // if (process.env.NODE_ENV !== 'production') {
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('taktakmenu-api-docs', app, document, {
-    swaggerOptions: {
-      docExpansion: 'none',
-      persistAuthorization: true,
-    },
-  });
-  // }
+  if (process.env.NODE_ENV !== 'production') {
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('taktakmenu-api-docs', app, document, {
+      swaggerOptions: {
+        docExpansion: 'none',
+        persistAuthorization: true,
+      },
+    });
+  }
 
   // ============================================
   // Global Validation Pipe (Enhanced Security)

@@ -90,7 +90,7 @@ export class TenantsController {
 
   @Get()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get paginated list of tenants', description: 'Returns tenants with pagination, sorting, and optional search.' })
+  @ApiOperation({ summary: 'Get paginated list of tenants (System Admin only)', description: 'Returns tenants with pagination, sorting, and optional search. Only accessible by System Admins.' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
   @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Number of items per page', example: 10 })
   @ApiQuery({ name: 'sortBy', required: true, type: String, description: 'Field to sort by', example: 'createdAt' })
@@ -99,7 +99,13 @@ export class TenantsController {
   @ApiResponse(FetchResponse)
   async getAllTenants(
     @Query() paginationDto: PaginationDto,
+    @GetUser() user: JwtUser,
   ): Promise<PaginationResult<FetchTenantOptimizedDto>> {
+    // Only SYS_ADMIN can access this endpoint
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new ForbiddenException('Only system admins can access this resource');
+    }
+
     if (!paginationDto.page || !paginationDto.limit) {
       throw new BadRequestException('page and limit are required');
     }
@@ -109,15 +115,26 @@ export class TenantsController {
 
   @Get(':id')
   @ApiBearerAuth('access-token')
-  async getTenant(@Param('id') id: string): Promise<Tenant> {
+  async getTenant(@Param('id') id: string, @GetUser() user: JwtUser): Promise<Tenant> {
+    // Only SYS_ADMIN can access this endpoint
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new ForbiddenException('Only system admins can access this resource');
+    }
     return this.tenantsService.findById(id);
   }
 
   @Post()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create a new tenant (Super Admin only)' })
+  @ApiOperation({ summary: 'Create a new tenant (System Admin only)' })
   @ApiResponse({ status: 201, description: 'Tenant created successfully', type: FetchTenantOptimizedDto })
-  async createTenant(@Body() dto: CreateTenantDto, @GetUser() user: JwtUser): Promise<FetchTenantOptimizedDto> {
+  async createTenant(
+    @Body() dto: CreateTenantDto,
+    @GetUser() user: JwtUser,
+  ): Promise<FetchTenantOptimizedDto> {
+    // Only SYS_ADMIN can create tenants
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new ForbiddenException('Only system admins can create tenants');
+    }
     return this.tenantsService.createTenant(dto, user);
   }
 
@@ -176,7 +193,11 @@ export class TenantsController {
 
   @Delete(':id')
   @ApiBearerAuth('access-token')
-  async deleteTenant(@Param('id') id: string): Promise<{ message: string }> {
+  async deleteTenant(@Param('id') id: string, @GetUser() user: JwtUser): Promise<{ message: string }> {
+    // Only SYS_ADMIN can delete tenants
+    if (user.role !== UserRole.SYS_ADMIN) {
+      throw new ForbiddenException('Only system admins can delete tenants');
+    }
     await this.tenantsService.deleteTenant(id);
     return { message: 'Tenant deleted successfully' };
   }
