@@ -85,7 +85,6 @@ export class MenuCategoryController {
   }
 
   @Get()
-  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of menu categories' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })

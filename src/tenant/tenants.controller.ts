@@ -77,7 +77,6 @@ export class TenantsController {
   // ========== Protected Endpoints (Auth Required) ==========
 
   @Get('info')
-  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get tenant profile from authenticated user token' })
   @ApiResponse({ status: 200, description: 'Tenant profile fetched successfully', type: Tenant })

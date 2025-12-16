@@ -58,7 +58,7 @@ export class SubscriptionsService {
   ) {
     // Read environment variable to determine if we should use test durations
     // Defaults to false (production mode) if not set
-    this.useTestDuration = this.configService.get<string>('USE_TEST_SUBSCRIPTION_DURATION') === 'false';
+    this.useTestDuration = this.configService.get<string>('USE_TEST_SUBSCRIPTION_DURATION') === 'true';
   }
 
   async createSubscription(tenant: Tenant, plan: Plan): Promise<Subscription> {
