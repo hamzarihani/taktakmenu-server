@@ -6,6 +6,8 @@ import { MenuCategory } from './entities/menu-category.entity';
 import { FileModule } from '../file/file.module';
 import { UsersModule } from '../users/users.module';
 import { TenantsModule } from '../tenant/tenants.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { GuardsModule } from '../common/guards/guards.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { TenantsModule } from '../tenant/tenants.module';
     FileModule,
     UsersModule,
     TenantsModule,
+    SubscriptionsModule,
+    GuardsModule,
   ],
   controllers: [MenuCategoryController],
   providers: [MenuCategoryService],

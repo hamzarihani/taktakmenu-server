@@ -10,6 +10,7 @@ import {
   Query,
   Req,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -32,6 +33,7 @@ import { plainToInstance } from 'class-transformer';
 import { UsersService } from '../users/users.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UserRole } from '../users/entities/user.entity';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @ApiTags('Tenants Controller')
 @Controller('tenants')
@@ -58,6 +60,7 @@ export class TenantsController {
   // ========== Public Endpoints (No Auth Required) ==========
 
   @Get('public/profile')
+  @UseGuards(SubscriptionGuard)
   @ApiOperation({ summary: 'Get tenant profile by subdomain (Public)' })
   @ApiResponse({ status: 200, description: 'Tenant profile fetched successfully', type: PublicTenantProfileDto })
   async getTenantProfilePublic(
@@ -74,6 +77,7 @@ export class TenantsController {
   // ========== Protected Endpoints (Auth Required) ==========
 
   @Get('info')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get tenant profile from authenticated user token' })
   @ApiResponse({ status: 200, description: 'Tenant profile fetched successfully', type: Tenant })
@@ -139,6 +143,7 @@ export class TenantsController {
   }
 
   @Put('profile')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update tenant profile (Super Admin only)' })
   @ApiConsumes('multipart/form-data')

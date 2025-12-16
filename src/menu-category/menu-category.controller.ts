@@ -11,6 +11,7 @@ import {
   Put,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,6 +28,7 @@ import { UsersService } from '../users/users.service';
 import { FetchMenuCategoryDto } from './dtos/fetch-menu-category.dto';
 import { GetSubdomain } from '../common/get-subdomain-decorator';
 import { TenantsService } from '../tenant/tenants.service';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @ApiTags('Menu Category Controller')
 @Controller('menu-categories')
@@ -54,6 +56,7 @@ export class MenuCategoryController {
   // ========== Public Endpoints (No Auth Required) ==========
 
   @Get('public')
+  @UseGuards(SubscriptionGuard)
   @ApiOperation({ summary: 'Get all menu categories by subdomain (Public)' })
   @ApiResponse({ status: 200, description: 'Categories fetched successfully', type: [FetchMenuCategoryDto] })
   async getCategoriesPublic(
@@ -66,6 +69,7 @@ export class MenuCategoryController {
   // ========== Protected Endpoints (Auth Required) ==========
 
   @Post()
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new menu category' })
   @ApiConsumes('multipart/form-data')
@@ -81,6 +85,7 @@ export class MenuCategoryController {
   }
 
   @Get()
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of menu categories' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
@@ -101,6 +106,7 @@ export class MenuCategoryController {
   }
 
   @Get(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a menu category by ID' })
   @ApiResponse({ status: 200, description: 'Category fetched successfully', type: MenuCategory })
@@ -113,6 +119,7 @@ export class MenuCategoryController {
   }
 
   @Put(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a menu category' })
   @ApiConsumes('multipart/form-data')
@@ -129,6 +136,7 @@ export class MenuCategoryController {
   }
 
   @Patch(':id/toggle')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Enable or disable a menu category' })
   @ApiQuery({ name: 'action', required: true, enum: ['enable', 'disable'], description: 'Action to perform: enable or disable' })
@@ -147,6 +155,7 @@ export class MenuCategoryController {
   }
 
   @Delete(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a menu category' })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Tenant } from '../tenant/entities/tenant.entity';
 import { Plan } from '../plan/entities/plan.entity';
 import { Subscription } from './entities/subscription.entity';
@@ -15,19 +16,37 @@ import { UpdateSubscriptionDto } from './dtos/update-subscription.dto';
 
 /**
  * Helper function to calculate end date based on billing period unit and value
+ * Switch between test mode and production mode using USE_TEST_SUBSCRIPTION_DURATION env var
  */
-function calculateEndDate(unit: 'month' | 'year', value: number): Date {
+function calculateEndDate(unit: 'month' | 'year', value: number, useTestDuration: boolean): Date {
   const now = new Date();
-  if (unit === 'month') {
-    now.setMonth(now.getMonth() + value);
-  } else if (unit === 'year') {
-    now.setFullYear(now.getFullYear() + value);
+  
+  if (useTestDuration) {
+    // Test mode: Convert to minutes for faster testing
+    if (unit === 'month') {
+      // 1 month = 1 minute for testing
+      now.setMinutes(now.getMinutes() + value);
+    } else if (unit === 'year') {
+      // 1 year = 5 minutes, 2 years = 10 minutes, 3 years = 15 minutes
+      const minutesToAdd = value * 5;
+      now.setMinutes(now.getMinutes() + minutesToAdd);
+    }
+  } else {
+    // Production mode: Use real duration
+    if (unit === 'month') {
+      now.setMonth(now.getMonth() + value);
+    } else if (unit === 'year') {
+      now.setFullYear(now.getFullYear() + value);
+    }
   }
+  
   return now;
 }
 
 @Injectable()
 export class SubscriptionsService {
+  private readonly useTestDuration: boolean;
+
   constructor(
     @InjectRepository(Subscription)
     private subscriptionRepo: Repository<Subscription>,
@@ -35,7 +54,12 @@ export class SubscriptionsService {
     private plansRepository: Repository<Plan>,
     @InjectRepository(Tenant)
     private tenantRepository: Repository<Tenant>,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    // Read environment variable to determine if we should use test durations
+    // Defaults to false (production mode) if not set
+    this.useTestDuration = this.configService.get<string>('USE_TEST_SUBSCRIPTION_DURATION') === 'false';
+  }
 
   async createSubscription(tenant: Tenant, plan: Plan): Promise<Subscription> {
     try {
@@ -49,7 +73,7 @@ export class SubscriptionsService {
         .execute();
 
       const startDate = new Date();
-      const endDate = calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue);
+      const endDate = calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue, this.useTestDuration);
 
       const subscription = this.subscriptionRepo.create({
         tenant,
@@ -164,7 +188,7 @@ export class SubscriptionsService {
       tenant,
       plan,
       startDate: now,
-      endDate: calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue),
+      endDate: calculateEndDate(plan.billingPeriodUnit, plan.billingPeriodValue, this.useTestDuration),
       status: 'active',
     });
 

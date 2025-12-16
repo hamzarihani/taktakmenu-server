@@ -11,6 +11,7 @@ import {
   Put,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,6 +28,7 @@ import { UsersService } from '../users/users.service';
 import { FetchMenuItemDto } from './dtos/fetch-menu-item.dto';
 import { GetSubdomain } from '../common/get-subdomain-decorator';
 import { TenantsService } from '../tenant/tenants.service';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @ApiTags('Menu Item Controller')
 @Controller('menu-items')
@@ -54,6 +56,7 @@ export class MenuItemController {
   // ========== Public Endpoints (No Auth Required) ==========
 
   @Get('public/category/:categoryId')
+  @UseGuards(SubscriptionGuard)
   @ApiOperation({ summary: 'Get all menu items by category ID (Public)' })
   @ApiResponse({ status: 200, description: 'Items fetched successfully', type: [FetchMenuItemDto] })
   async getItemsByCategoryPublic(
@@ -67,6 +70,7 @@ export class MenuItemController {
   // ========== Protected Endpoints (Auth Required) ==========
 
   @Post()
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new menu item' })
   @ApiConsumes('multipart/form-data')
@@ -82,6 +86,7 @@ export class MenuItemController {
   }
 
   @Get()
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of menu items' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
@@ -104,6 +109,7 @@ export class MenuItemController {
   }
 
   @Get('category/:categoryId')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get menu items by category ID' })
   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number', example: 1 })
@@ -125,6 +131,7 @@ export class MenuItemController {
   }
 
   @Get(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get a menu item by ID' })
   @ApiResponse({ status: 200, description: 'Item fetched successfully', type: MenuItem })
@@ -137,6 +144,7 @@ export class MenuItemController {
   }
 
   @Put(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a menu item' })
   @ApiConsumes('multipart/form-data')
@@ -153,6 +161,7 @@ export class MenuItemController {
   }
 
   @Patch(':id/toggle')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Enable or disable a menu item' })
   @ApiQuery({ name: 'action', required: true, enum: ['enable', 'disable'], description: 'Action to perform: enable or disable' })
@@ -171,6 +180,7 @@ export class MenuItemController {
   }
 
   @Delete(':id')
+  @UseGuards(SubscriptionGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a menu item' })
   @ApiResponse({ status: 200, description: 'Item deleted successfully' })
