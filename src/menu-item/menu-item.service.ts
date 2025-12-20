@@ -92,7 +92,12 @@ export class MenuItemService {
         throw new BadRequestException(`Cannot sort by '${sortBy}'`);
       }
 
-      const query = this.menuItemRepository
+      // Build base query conditions for both count and data queries
+      const countQuery = this.menuItemRepository
+        .createQueryBuilder('item')
+        .where('item.tenantId = :tenantId', { tenantId });
+
+      const dataQuery = this.menuItemRepository
         .createQueryBuilder('item')
         .where('item.tenantId = :tenantId', { tenantId })
         .leftJoinAndSelect('item.category', 'category')
@@ -100,7 +105,8 @@ export class MenuItemService {
         .leftJoinAndSelect('item.createdBy', 'createdBy');
 
       if (categoryId) {
-        query.andWhere('item.categoryId = :categoryId', { categoryId });
+        countQuery.andWhere('item.categoryId = :categoryId', { categoryId });
+        dataQuery.andWhere('item.categoryId = :categoryId', { categoryId });
       }
 
       if (search) {
@@ -109,12 +115,16 @@ export class MenuItemService {
           .map((col) => `CAST(item.${col} AS CHAR) LIKE :search`)
           .join(' OR ');
 
-        query.andWhere(`(${searchConditions})`, {
+        countQuery.andWhere(`(${searchConditions})`, {
+          search: `%${search.toLowerCase()}%`,
+        });
+        dataQuery.andWhere(`(${searchConditions})`, {
           search: `%${search.toLowerCase()}%`,
         });
       }
 
-      const totalElements = await query.getCount();
+      // Execute count query separately (simpler, faster)
+      const totalElements = await countQuery.getCount();
 
       if (offset >= totalElements) {
         return {
@@ -125,7 +135,8 @@ export class MenuItemService {
         };
       }
 
-      const items = await query
+      // Execute data query with joins and pagination
+      const items = await dataQuery
         .skip(offset)
         .take(limit)
         .orderBy(`item.${sortBy || 'createdAt'}`, (sortOrder || 'DESC').toUpperCase() as 'ASC' | 'DESC')
@@ -141,6 +152,10 @@ export class MenuItemService {
       return { data, hasNext, totalElements, totalPages };
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
+      // Check for connection errors and provide more helpful error message
+      if (error instanceof Error && (error.message.includes('ECONNRESET') || error.message.includes('ECONNREFUSED'))) {
+        throw new InternalServerErrorException('Database connection error. Please try again.');
+      }
       throw new InternalServerErrorException('Failed to fetch menu items');
     }
   }

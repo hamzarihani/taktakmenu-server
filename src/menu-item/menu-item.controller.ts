@@ -22,6 +22,7 @@ import { PaginationDto } from '../common/dtos/pagination.dto';
 import { PaginationResult } from '../common/interfaces';
 import { CreateMenuItemDto } from './dtos/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dtos/update-menu-item.dto';
+import { MenuItemsPaginationDto } from './dtos/menu-items-pagination.dto';
 import { GetUser } from '../common/get-user-decorator';
 import type { JwtUser } from '../common/interfaces';
 import { UsersService } from '../users/users.service';
@@ -96,15 +97,14 @@ export class MenuItemController {
   @ApiQuery({ name: 'categoryId', required: false, type: String, description: 'Filter by category ID' })
   @ApiResponse({ status: 200, description: 'Items fetched successfully' })
   async getItems(
-    @Query() paginationDto: PaginationDto,
-    @Query('categoryId') categoryId: string,
+    @Query() paginationDto: MenuItemsPaginationDto,
     @GetUser() user: JwtUser,
   ): Promise<PaginationResult<FetchMenuItemDto>> {
     if (!paginationDto.page || !paginationDto.limit) {
       throw new BadRequestException('page and limit are required');
     }
     const tenantId = await this.getTenantId(user);
-    return this.menuItemService.findItems(paginationDto, tenantId, categoryId);
+    return this.menuItemService.findItems(paginationDto, tenantId, paginationDto.categoryId);
   }
 
   @Get('category/:categoryId')

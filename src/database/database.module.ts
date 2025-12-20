@@ -35,6 +35,14 @@ import { User } from '../users/entities/user.entity';
           // Keep connection alive
           keepAliveInitialDelay: 0,
           enableKeepAlive: true,
+          // Query timeout to prevent hanging queries
+          queryTimeout: 30000, // 30 seconds
+          // Socket timeout to detect connection issues faster
+          socketTimeout: 60000, // 60 seconds
+          // Reconnect on connection loss
+          reconnect: true,
+          // Acquire timeout for getting connection from pool
+          acquireTimeout: 30000, // 30 seconds
         },
         // Connection retry settings
         retryAttempts: 3,
